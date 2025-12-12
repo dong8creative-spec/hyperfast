@@ -16,23 +16,21 @@
         /* 로그인 전체 화면 */
         #login-overlay {
             position: fixed; top: 0; left: 0; width: 100%; height: 100%;
-            background: #fff; z-index: 9999; display: flex;
-            overflow-y: auto; /* 화면 작을 때 스크롤 허용 */
+            background: #fff; z-index: 9990; display: flex;
+            overflow-y: auto; 
         }
 
-        /* 왼쪽: 이미지 영역 (1:1 비율 고정) */
+        /* 왼쪽: 이미지 영역 */
         .login-left-image {
             width: 50%; 
-            aspect-ratio: 1 / 1; /* 정사각형 비율 강제 */
+            aspect-ratio: 1 / 1; 
             max-height: 100vh;
             background-color: #f0f0f0;
             display: flex; justify-content: center; align-items: center; 
             overflow: hidden; flex-shrink: 0;
             position: relative;
         }
-        .login-left-image img { 
-            width: 100%; height: 100%; object-fit: cover; 
-        }
+        .login-left-image img { width: 100%; height: 100%; object-fit: cover; }
 
         /* 오른쪽: 입력 폼 영역 */
         .login-right-form {
@@ -61,11 +59,44 @@
         button:hover { background: #555; }
 
         /* =========================================
+           [NEW] 커스텀 경고 팝업 (Modal) 스타일
+           ========================================= */
+        #error-modal {
+            display: none; /* 평소엔 숨김 */
+            position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+            background: rgba(0,0,0,0.6); /* 검은색 반투명 배경 */
+            z-index: 9999; /* 제일 위에 뜨게 */
+            justify-content: center; align-items: center;
+        }
+        .modal-content {
+            background: white; padding: 30px; border-radius: 12px;
+            width: 90%; max-width: 350px; text-align: center;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.3);
+            animation: shake 0.4s ease-in-out; /* 덜덜 떨리는 효과 */
+        }
+        .modal-title { color: #e74c3c; font-size: 20px; font-weight: 900; margin-bottom: 10px; }
+        .modal-desc { color: #555; font-size: 15px; margin-bottom: 25px; line-height: 1.5; }
+        .modal-btn {
+            background: #e74c3c; color: white; padding: 12px 0; width: 100%;
+            border: none; border-radius: 6px; font-weight: bold; cursor: pointer; font-size: 16px;
+        }
+        .modal-btn:hover { background: #c0392b; }
+
+        /* 팝업 덜덜 떨리는 애니메이션 */
+        @keyframes shake {
+            0% { transform: translateX(0); }
+            25% { transform: translateX(-5px); }
+            50% { transform: translateX(5px); }
+            75% { transform: translateX(-5px); }
+            100% { transform: translateX(0); }
+        }
+
+        /* =========================================
            2. PDF 뷰어 영역
            ========================================= */
         #pdf-container {
             display: flex; flex-direction: column; align-items: center; padding: 20px 0;
-            display: none; /* 초기엔 숨김 */
+            display: none; 
         }
         canvas {
             margin-bottom: 20px; box-shadow: 0 5px 25px rgba(0,0,0,0.5);
@@ -73,41 +104,39 @@
         }
 
         /* =========================================
-           3. DVD 밈 스타일 워터마크 (Bouncing)
+           3. DVD 밈 스타일 워터마크
            ========================================= */
         #watermark-layer {
             position: fixed; top: 0; left: 0; width: 100%; height: 100%;
-            pointer-events: none; /* 클릭 통과 */
-            z-index: 999; display: none; overflow: hidden;
+            pointer-events: none; z-index: 999; display: none; overflow: hidden;
         }
-        
-        /* 개별 워터마크 스타일 */
         .bouncing-text {
             position: absolute;
-            font-size: 20px; font-weight: 900; color: rgba(0, 0, 0, 0.15); /* 연한 검정색 */
-            white-space: nowrap;
-            user-select: none;
-            /* 텍스트 테두리를 줘서 가독성 높임 (선택사항) */
+            font-size: 20px; font-weight: 900; color: rgba(0, 0, 0, 0.15);
+            white-space: nowrap; user-select: none;
             text-shadow: 1px 1px 2px rgba(255, 255, 255, 0.5);
         }
 
-        /* =========================================
-           4. 모바일 반응형
-           ========================================= */
+        /* 4. 모바일 반응형 */
         @media (max-width: 900px) {
-            #login-overlay { 
-                flex-direction: column; position: absolute; height: auto; min-height: 100vh; 
-            }
-            .login-left-image { 
-                width: 100%; aspect-ratio: 1 / 1; max-height: none; 
-            }
-            .login-right-form { 
-                width: 100%; padding: 60px 20px; flex: none; 
-            }
+            #login-overlay { flex-direction: column; position: absolute; height: auto; min-height: 100vh; }
+            .login-left-image { width: 100%; aspect-ratio: 1 / 1; max-height: none; }
+            .login-right-form { width: 100%; padding: 60px 20px; flex: none; }
         }
     </style>
 </head>
 <body oncontextmenu="return false" ondragstart="return false">
+
+    <div id="error-modal">
+        <div class="modal-content">
+            <div class="modal-title">⚠ 접근 거부</div>
+            <div class="modal-desc">
+                유효하지 않은 보안 코드입니다.<br>
+                코드를 다시 확인해주십시오.
+            </div>
+            <button class="modal-btn" onclick="closePopup()">확인</button>
+        </div>
+    </div>
 
     <div id="login-overlay">
         <div class="login-left-image">
@@ -130,62 +159,70 @@
     </div>
 
     <div id="pdf-container"></div>
-    
     <div id="watermark-layer"></div>
 
     <script>
-        /* =========================================
-           ★ 사용자 설정 구역 (여기만 고치세요) ★
-           ========================================= */
-        const pdfUrl = './hhyperfastt.pdf';  // PDF 파일명 (대소문자 정확히)
-        const validCodes = ['1210', '931122', '870625', 'admin0625']; // 입장 가능한 코드 목록
-        const watermarkCount = 3; // 화면에 떠다닐 워터마크 개수 (너무 많으면 정신없음)
+        /* ★ 사용자 설정 구역 ★ */
+        const pdfUrl = './hhyperfastt.pdf';  
+        const validCodes = ['1210', '931122', '870625', 'admin0625']; 
+        const watermarkCount = 3; 
 
-        /* =========================================
-           시스템 로직 (건드리지 않으셔도 됩니다)
-           ========================================= */
-        
-        let clientIP = "IP 추적 불가"; // 기본값
+        /* 시스템 로직 */
+        let clientIP = "IP 추적 불가";
 
-        // 1. 접속자 IP 가져오기 (무료 API 활용)
+        // IP 가져오기
         fetch('https://api.ipify.org?format=json')
             .then(response => response.json())
             .then(data => {
                 clientIP = data.ip;
                 document.getElementById('ip-display').innerText = `접속 IP: ${clientIP} (기록됨)`;
-                document.getElementById('ip-display').style.color = "#27ae60"; // 초록색으로 변경
+                document.getElementById('ip-display').style.color = "#27ae60"; 
             })
             .catch(error => {
-                console.log("IP fetch failed", error);
                 document.getElementById('ip-display').innerText = "접속 IP: 비공개 모드 감지됨";
             });
 
-        // PDF 라이브러리 설정
         pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/2.16.105/pdf.worker.min.js';
 
-        // 2. 입장 시작 함수
+        /* [NEW] 엔터키 입력 감지 기능 */
+        document.getElementById('access-code').addEventListener("keypress", function(event) {
+            if (event.key === "Enter") {
+                event.preventDefault(); // 기본 동작 방지
+                startViewer(); // 입장 함수 실행
+            }
+        });
+
+        // 입장 시작 함수
         function startViewer() {
             const inputCode = document.getElementById('access-code').value.trim();
             
             if(validCodes.includes(inputCode)) {
-                // UI 전환
+                // 성공 시
                 document.getElementById('login-overlay').style.display = 'none';
                 document.getElementById('pdf-container').style.display = 'flex';
-                document.getElementById('watermark-layer').style.display = 'block'; // block으로 변경
+                document.getElementById('watermark-layer').style.display = 'block'; 
                 
-                // 워터마크 텍스트 생성 (코드 + IP)
                 const secureText = `${inputCode} / ${clientIP} / 유출금지`;
-                
-                // PDF 렌더링 및 워터마크 시작
                 renderPDF();
                 initBouncingWatermarks(secureText); 
 
             } else {
-                alert("잘못 입력하셨습니다.");
+                // [NEW] 실패 시 경고 팝업 띄우기 (alert 대신 사용)
+                openPopup();
             }
         }
 
-        // 3. PDF 렌더링 함수
+        /* [NEW] 팝업 열기/닫기 함수 */
+        function openPopup() {
+            document.getElementById('error-modal').style.display = 'flex';
+        }
+        function closePopup() {
+            document.getElementById('error-modal').style.display = 'none';
+            document.getElementById('access-code').value = ''; // 입력창 초기화
+            document.getElementById('access-code').focus(); // 다시 입력하도록 포커스
+        }
+
+        // PDF 렌더링
         async function renderPDF() {
             try {
                 const pdf = await pdfjsLib.getDocument(pdfUrl).promise;
@@ -193,7 +230,7 @@
 
                 for (let pageNum = 1; pageNum <= pdf.numPages; pageNum++) {
                     const page = await pdf.getPage(pageNum);
-                    const scale = 1.5; // 해상도 배율
+                    const scale = 1.5; 
                     const viewport = page.getViewport({ scale: scale });
 
                     const canvas = document.createElement('canvas');
@@ -205,71 +242,54 @@
                     await page.render({ canvasContext: context, viewport: viewport }).promise;
                 }
             } catch (error) {
-                alert("PDF 파일을 불러올 수 없습니다. 파일명과 서버 업로드 상태를 확인하세요.");
+                alert("PDF 파일 로딩 오류 (파일명 확인 필요)");
             }
         }
 
-        /* =========================================
-           ★ DVD 밈 스타일 (Bouncing) 로직 구현 ★
-           ========================================= */
+        // DVD 밈 워터마크 (Bouncing)
         function initBouncingWatermarks(text) {
             const container = document.getElementById('watermark-layer');
             const marks = [];
 
-            // 워터마크 요소 생성
             for (let i = 0; i < watermarkCount; i++) {
                 const el = document.createElement('div');
                 el.className = 'bouncing-text';
                 el.innerText = text;
                 container.appendChild(el);
 
-                // 랜덤 시작 위치 및 속도 설정
                 marks.push({
                     el: el,
                     x: Math.random() * (window.innerWidth - 200),
                     y: Math.random() * (window.innerHeight - 50),
-                    dx: (Math.random() - 0.5) * 1, // 가로 속도 (조절 가능)
-                    dy: (Math.random() - 0.5) * 1  // 세로 속도 (조절 가능)
+                    dx: (Math.random() - 0.5) * 1, 
+                    dy: (Math.random() - 0.5) * 1  
                 });
             }
 
-            // 애니메이션 루프
             function animate() {
                 const width = window.innerWidth;
                 const height = window.innerHeight;
 
                 marks.forEach(mark => {
-                    // 위치 업데이트
                     mark.x += mark.dx;
                     mark.y += mark.dy;
 
-                    // 요소 크기 측정 (충돌 계산용)
                     const elWidth = mark.el.offsetWidth;
                     const elHeight = mark.el.offsetHeight;
 
-                    // 벽 충돌 감지 (좌우)
-                    if (mark.x + elWidth >= width || mark.x <= 0) {
-                        mark.dx = -mark.dx; // 방향 반전
-                    }
-                    // 벽 충돌 감지 (상하)
-                    if (mark.y + elHeight >= height || mark.y <= 0) {
-                        mark.dy = -mark.dy; // 방향 반전
-                    }
+                    if (mark.x + elWidth >= width || mark.x <= 0) mark.dx = -mark.dx;
+                    if (mark.y + elHeight >= height || mark.y <= 0) mark.dy = -mark.dy;
 
-                    // 화면 밖으로 나가는 버그 방지 (강제 보정)
                     if(mark.x < 0) mark.x = 0;
                     if(mark.y < 0) mark.y = 0;
                     if(mark.x + elWidth > width) mark.x = width - elWidth;
                     if(mark.y + elHeight > height) mark.y = height - elHeight;
 
-                    // 실제 위치 적용
                     mark.el.style.transform = `translate(${mark.x}px, ${mark.y}px)`;
                 });
-
-                requestAnimationFrame(animate); // 무한 반복
+                requestAnimationFrame(animate); 
             }
-
-            animate(); // 애니메이션 시작
+            animate(); 
         }
     </script>
 </body>
