@@ -228,4 +228,157 @@
             const blocker = document.getElementById('prtsc-blocker');
             blocker.style.display = 'flex';
             failCount = maxAttempts;
-            localStorage.setItem('accessFailCount', fail
+            localStorage.setItem('accessFailCount', failCount);
+            setTimeout(function() {
+                blocker.style.display = 'none';
+                showBanScreen();
+            }, 1500);
+        }
+
+        // keyup 이벤트로 PrintScreen 감지 (호환성 UP)
+        document.addEventListener('keyup', function(e) {
+            if (e.key === "PrintScreen") triggerSecurityBreach();
+        });
+
+        // keydown 이벤트로 Mac 단축키 등 감지
+        document.addEventListener('keydown', function(event) {
+            // Windows PrintScreen
+            if (event.key === "PrintScreen") {
+                triggerSecurityBreach();
+                return;
+            }
+            // Mac Capture Shortcuts (Cmd + Shift + 3/4/5)
+            if (event.metaKey && event.shiftKey) {
+                if (event.key === '3' || event.key === '4' || event.key === '5') {
+                    triggerSecurityBreach();
+                    event.preventDefault();
+                    return;
+                }
+            }
+            // 엔터키 입장
+            if (event.key === "Enter") {
+                const modal = document.getElementById('error-modal');
+                if (document.getElementById('ban-overlay').style.display === 'flex') return; 
+                if (modal.style.display === 'flex') { closePopup(); return; }
+                if (document.activeElement === document.getElementById('access-code')) startViewer();
+            }
+        });
+
+        // 2. [보안] 윈도우 포커스 이탈 감지 (캡처 도구 실행 시 화면 가림)
+        window.addEventListener('blur', function() {
+            if (isLoggedIn) {
+                document.getElementById('blur-overlay').style.display = 'flex';
+            }
+        });
+        window.addEventListener('focus', function() {
+            if (isLoggedIn) {
+                document.getElementById('blur-overlay').style.display = 'none';
+            }
+        });
+
+        // 마우스 이탈 감지 (선택 사항: 불편하면 이 부분 삭제 가능)
+        document.addEventListener('mouseleave', function() {
+            if (isLoggedIn) {
+                document.getElementById('blur-overlay').style.display = 'flex';
+            }
+        });
+        document.addEventListener('mouseenter', function() {
+            if (isLoggedIn) {
+                document.getElementById('blur-overlay').style.display = 'none';
+            }
+        });
+
+
+        function startViewer() {
+            if (failCount >= maxAttempts) { showBanScreen(); return; }
+            const inputCode = document.getElementById('access-code').value.trim();
+            
+            if(validCodes.includes(inputCode)) {
+                localStorage.removeItem('accessFailCount');
+                isLoggedIn = true;
+                
+                document.getElementById('login-overlay').style.display = 'none';
+                document.getElementById('pdf-container').style.display = 'flex';
+                document.getElementById('watermark-layer').style.display = 'block'; 
+                
+                const secureText = `${inputCode} / ${clientIP} / 유출금지`;
+                renderPDF();
+                initBouncingWatermarks(secureText); 
+            } else {
+                failCount++;
+                localStorage.setItem('accessFailCount', failCount);
+                const remaining = maxAttempts - failCount;
+                if (remaining <= 0) { showBanScreen(); } else {
+                    document.getElementById('error-msg').innerHTML = `코드 오류.<br><strong style="color:red;">(남은 기회: ${remaining}회)</strong><br>5회 오류 시 영구 차단.`;
+                    openPopup();
+                }
+            }
+        }
+
+        function showBanScreen() {
+            document.getElementById('login-overlay').style.display = 'none';
+            document.getElementById('error-modal').style.display = 'none';
+            document.getElementById('ban-overlay').style.display = 'flex';
+            document.getElementById('blur-overlay').style.display = 'none'; // 차단화면 잘 보이게 블러 끔
+        }
+        function openPopup() { document.getElementById('error-modal').style.display = 'flex'; }
+        function closePopup() { 
+            document.getElementById('error-modal').style.display = 'none'; 
+            document.getElementById('access-code').value = ''; 
+            document.getElementById('access-code').focus();
+        }
+
+        async function renderPDF() {
+            try {
+                const loadingTask = pdfjsLib.getDocument({
+                    url: pdfUrl,
+                    cMapUrl: 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/2.16.105/cmaps/',
+                    cMapPacked: true,
+                });
+                const pdf = await loadingTask.promise;
+                const container = document.getElementById('pdf-container');
+                for (let pageNum = 1; pageNum <= pdf.numPages; pageNum++) {
+                    const page = await pdf.getPage(pageNum);
+                    const scale = 1.5; 
+                    const viewport = page.getViewport({ scale: scale });
+                    const canvas = document.createElement('canvas');
+                    const context = canvas.getContext('2d');
+                    canvas.height = viewport.height;
+                    canvas.width = viewport.width;
+                    container.appendChild(canvas);
+                    await page.render({ canvasContext: context, viewport: viewport }).promise;
+                }
+            } catch (error) { alert("PDF 로딩 실패."); }
+        }
+
+        function initBouncingWatermarks(text) {
+            const container = document.getElementById('watermark-layer');
+            const marks = [];
+            for (let i = 0; i < watermarkCount; i++) {
+                const el = document.createElement('div');
+                el.className = 'bouncing-text';
+                el.innerText = text;
+                container.appendChild(el);
+                marks.push({
+                    el: el, x: Math.random() * (window.innerWidth - 200), y: Math.random() * (window.innerHeight - 50),
+                    dx: (Math.random() - 0.5) * 1, dy: (Math.random() - 0.5) * 1  
+                });
+            }
+            function animate() {
+                const width = window.innerWidth; const height = window.innerHeight;
+                marks.forEach(mark => {
+                    mark.x += mark.dx; mark.y += mark.dy;
+                    const elWidth = mark.el.offsetWidth; const elHeight = mark.el.offsetHeight;
+                    if (mark.x + elWidth >= width || mark.x <= 0) mark.dx = -mark.dx;
+                    if (mark.y + elHeight >= height || mark.y <= 0) mark.dy = -mark.dy;
+                    if(mark.x < 0) mark.x = 0; if(mark.y < 0) mark.y = 0;
+                    if(mark.x + elWidth > width) mark.x = width - elWidth; if(mark.y + elHeight > height) mark.y = height - elHeight;
+                    mark.el.style.transform = `translate(${mark.x}px, ${mark.y}px)`;
+                });
+                requestAnimationFrame(animate); 
+            }
+            animate(); 
+        }
+    </script>
+</body>
+</html>
