@@ -10,30 +10,31 @@
         /* =========================================
            1. 기본 및 레이아웃 설정
            ========================================= */
-        body { margin: 0; background-color: #222; overflow-x: hidden; user-select: none; font-family: 'pretendard', 'Noto Sans KR', sans-serif; cursor: none; /* 마우스 커서 숨김 (손전등 효과 극대화) */}
+        body { margin: 0; background-color: #525659; overflow-x: hidden; user-select: none; font-family: 'pretendard', 'Noto Sans KR', sans-serif;}
         * { box-sizing: border-box; }
 
-        /* [핵심] 손전등(Spotlight) 효과 */
-        /* 마우스 주변만 투명하고, 나머지는 검은색으로 덮어버림 */
-        #flashlight-layer {
-            position: fixed; top: 0; left: 0; width: 100%; height: 100%;
-            pointer-events: none; /* 클릭은 통과 */
-            z-index: 9999; /* 워터마크보다 위, 팝업보단 아래 */
-            background: radial-gradient(circle 150px at var(--x, 50%) var(--y, 50%), transparent 0%, rgba(0,0,0,0.98) 100%);
-            display: none; /* 로그인 전에는 숨김 */
-        }
-
-        /* [NEW] 인쇄(Ctrl+P) 시도 시 강제로 내용 숨김 */
+        /* [보안] 인쇄(Ctrl+P) 시도 시 강제로 내용 숨김 */
         @media print {
             body * { display: none !important; }
             html::after {
                 content: "보안 문서입니다. 인쇄 및 PDF 저장이 불가능합니다.";
-                display: block; font-size: 30px; align-items: center; justify-content: center;
-                width: 100%; height: 100vh;
+                display: flex; align-items: center; justify-content: center;
+                width: 100%; height: 100vh; font-size: 30px; font-weight: bold;
             }
         }
 
-        /* 캡처 감지 빨간 화면 */
+        /* [보안] 화면 가림막 (포커스 잃었을 때) */
+        #blur-overlay {
+            position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+            background: rgba(0, 0, 0, 0.95); /* 아주 어둡게 가림 */
+            z-index: 99995; 
+            display: none;
+            flex-direction: column; justify-content: center; align-items: center;
+            color: white; text-align: center;
+        }
+        .blur-msg { font-size: 24px; font-weight: bold; margin-bottom: 20px; }
+
+        /* [보안] 캡처 감지 빨간 화면 */
         #prtsc-blocker {
             position: fixed; top: 0; left: 0; width: 100%; height: 100%;
             background: #ff0000; z-index: 99999; display: none; 
@@ -46,7 +47,7 @@
         /* 로그인 전체 화면 */
         #login-overlay {
             position: fixed; top: 0; left: 0; width: 100%; height: 100%;
-            background: #fff; z-index: 9990; display: flex; cursor: default; /* 로그인창에선 마우스 보임 */
+            background: #fff; z-index: 9990; display: flex; 
             overflow-y: auto; 
         }
 
@@ -55,7 +56,7 @@
             position: fixed; top: 0; left: 0; width: 100%; height: 100%;
             background: #000; z-index: 10000; display: none; 
             flex-direction: column; justify-content: center; align-items: center;
-            color: #ff3333; text-align: center; cursor: default;
+            color: #ff3333; text-align: center;
         }
         .ban-icon { font-size: 80px; margin-bottom: 20px; }
         .ban-title { font-size: 40px; font-weight: 900; margin-bottom: 20px; text-transform: uppercase; }
@@ -97,7 +98,7 @@
         #error-modal {
             display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%;
             background: rgba(0,0,0,0.6); z-index: 9999; 
-            justify-content: center; align-items: center; cursor: default;
+            justify-content: center; align-items: center;
         }
         .modal-content {
             background: white; padding: 30px; border-radius: 12px;
@@ -130,8 +131,9 @@
         }
         .bouncing-text {
             position: absolute;
-            font-size: 20px; font-weight: 900; color: rgba(255, 255, 255, 0.1); /* 흰색 연하게 (검은 배경이라) */
+            font-size: 20px; font-weight: 900; color: rgba(0, 0, 0, 0.15); /* 다시 연한 검정으로 복구 */
             white-space: nowrap; user-select: none;
+            text-shadow: 1px 1px 2px rgba(255, 255, 255, 0.5);
         }
 
         /* 모바일 반응형 */
@@ -139,13 +141,17 @@
             #login-overlay { flex-direction: column; position: absolute; height: auto; min-height: 100vh; }
             .login-left-image { width: 100%; aspect-ratio: 1 / 1; max-height: none; }
             .login-right-form { width: 100%; padding: 60px 20px; flex: none; }
-            /* 모바일은 터치 기반이라 손전등 효과 끄거나 조정 필요하지만 일단 보안 위해 유지 */
         }
     </style>
 </head>
 <body oncontextmenu="return false" ondragstart="return false">
 
-    <div id="flashlight-layer"></div>
+    <div id="blur-overlay">
+        <div class="blur-msg">
+            화면 외부 조작이 감지되어 내용을 가립니다.<br>
+            브라우저 화면을 다시 클릭해주세요.
+        </div>
+    </div>
 
     <div id="prtsc-blocker">
         <div class="prtsc-title">⚠️ 보안 경고 ⚠️</div>
@@ -199,7 +205,7 @@
         /* ★ 사용자 설정 구역 ★ */
         const pdfUrl = './hhyperfastt.pdf';  
         const validCodes = ['1210', '931122', '870625', 'admin0625']; 
-        const watermarkCount = 5; // 검은 배경이라 조금 늘림
+        const watermarkCount = 3; 
         const maxAttempts = 5; 
 
         /* 시스템 로직 */
@@ -209,7 +215,6 @@
 
         if (failCount >= maxAttempts) showBanScreen();
 
-        // IP 추적
         fetch('https://api.ipify.org?format=json')
             .then(r => r.json()).then(d => {
                 clientIP = d.ip;
@@ -218,144 +223,9 @@
 
         pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/2.16.105/pdf.worker.min.js';
 
-        // [핵심] 손전등 효과 (마우스 따라다니기)
-        const flashlight = document.getElementById('flashlight-layer');
-        document.addEventListener('mousemove', function(e) {
-            if(isLoggedIn) {
-                // CSS 변수에 마우스 좌표 전달
-                flashlight.style.setProperty('--x', e.clientX + 'px');
-                flashlight.style.setProperty('--y', e.clientY + 'px');
-            }
-        });
-
-        // 캡처 감지 (키보드)
-        document.addEventListener('keyup', function(e) {
-            if (e.key === "PrintScreen") triggerSecurityBreach();
-        });
-
-        // 윈도우 포커스 이탈 감지 (캡처 프로그램 실행 시도 시)
-        window.addEventListener('blur', function() {
-            if (isLoggedIn) {
-                // 블러 시에는 화면을 아예 꺼버림 (검은색)
-                document.body.style.display = 'none';
-            }
-        });
-        window.addEventListener('focus', function() {
-            if (isLoggedIn) {
-                document.body.style.display = 'block';
-            }
-        });
-
+        // 1. [보안] 캡처 감지 (키보드) - 윈도우/맥 통합
         function triggerSecurityBreach() {
             const blocker = document.getElementById('prtsc-blocker');
             blocker.style.display = 'flex';
             failCount = maxAttempts;
-            localStorage.setItem('accessFailCount', failCount);
-            setTimeout(function() {
-                blocker.style.display = 'none';
-                showBanScreen();
-            }, 1500);
-        }
-
-        document.addEventListener('keydown', function(event) {
-            if (event.key === "Enter") {
-                const modal = document.getElementById('error-modal');
-                if (document.getElementById('ban-overlay').style.display === 'flex') return; 
-                if (modal.style.display === 'flex') { closePopup(); return; }
-                if (document.activeElement === document.getElementById('access-code')) startViewer();
-            }
-        });
-
-        function startViewer() {
-            if (failCount >= maxAttempts) { showBanScreen(); return; }
-            const inputCode = document.getElementById('access-code').value.trim();
-            
-            if(validCodes.includes(inputCode)) {
-                localStorage.removeItem('accessFailCount');
-                isLoggedIn = true;
-                
-                document.getElementById('login-overlay').style.display = 'none';
-                document.getElementById('pdf-container').style.display = 'flex';
-                document.getElementById('watermark-layer').style.display = 'block'; 
-                document.getElementById('flashlight-layer').style.display = 'block'; // 손전등 켜기
-                
-                const secureText = `${inputCode} / ${clientIP} / 유출금지`;
-                renderPDF();
-                initBouncingWatermarks(secureText); 
-            } else {
-                failCount++;
-                localStorage.setItem('accessFailCount', failCount);
-                const remaining = maxAttempts - failCount;
-                if (remaining <= 0) { showBanScreen(); } else {
-                    document.getElementById('error-msg').innerHTML = `코드 오류.<br><strong style="color:red;">(남은 기회: ${remaining}회)</strong><br>5회 오류 시 영구 차단.`;
-                    openPopup();
-                }
-            }
-        }
-
-        function showBanScreen() {
-            document.getElementById('login-overlay').style.display = 'none';
-            document.getElementById('error-modal').style.display = 'none';
-            document.getElementById('ban-overlay').style.display = 'flex';
-        }
-        function openPopup() { document.getElementById('error-modal').style.display = 'flex'; }
-        function closePopup() { 
-            document.getElementById('error-modal').style.display = 'none'; 
-            document.getElementById('access-code').value = ''; 
-            document.getElementById('access-code').focus();
-        }
-
-        async function renderPDF() {
-            try {
-                const loadingTask = pdfjsLib.getDocument({
-                    url: pdfUrl,
-                    cMapUrl: 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/2.16.105/cmaps/',
-                    cMapPacked: true,
-                });
-                const pdf = await loadingTask.promise;
-                const container = document.getElementById('pdf-container');
-                for (let pageNum = 1; pageNum <= pdf.numPages; pageNum++) {
-                    const page = await pdf.getPage(pageNum);
-                    const scale = 1.5; 
-                    const viewport = page.getViewport({ scale: scale });
-                    const canvas = document.createElement('canvas');
-                    const context = canvas.getContext('2d');
-                    canvas.height = viewport.height;
-                    canvas.width = viewport.width;
-                    container.appendChild(canvas);
-                    await page.render({ canvasContext: context, viewport: viewport }).promise;
-                }
-            } catch (error) { alert("PDF 로딩 실패."); }
-        }
-
-        function initBouncingWatermarks(text) {
-            const container = document.getElementById('watermark-layer');
-            const marks = [];
-            for (let i = 0; i < watermarkCount; i++) {
-                const el = document.createElement('div');
-                el.className = 'bouncing-text';
-                el.innerText = text;
-                container.appendChild(el);
-                marks.push({
-                    el: el, x: Math.random() * (window.innerWidth - 200), y: Math.random() * (window.innerHeight - 50),
-                    dx: (Math.random() - 0.5) * 1, dy: (Math.random() - 0.5) * 1  
-                });
-            }
-            function animate() {
-                const width = window.innerWidth; const height = window.innerHeight;
-                marks.forEach(mark => {
-                    mark.x += mark.dx; mark.y += mark.dy;
-                    const elWidth = mark.el.offsetWidth; const elHeight = mark.el.offsetHeight;
-                    if (mark.x + elWidth >= width || mark.x <= 0) mark.dx = -mark.dx;
-                    if (mark.y + elHeight >= height || mark.y <= 0) mark.dy = -mark.dy;
-                    if(mark.x < 0) mark.x = 0; if(mark.y < 0) mark.y = 0;
-                    if(mark.x + elWidth > width) mark.x = width - elWidth; if(mark.y + elHeight > height) mark.y = height - elHeight;
-                    mark.el.style.transform = `translate(${mark.x}px, ${mark.y}px)`;
-                });
-                requestAnimationFrame(animate); 
-            }
-            animate(); 
-        }
-    </script>
-</body>
-</html>
+            localStorage.setItem('accessFailCount', fail
