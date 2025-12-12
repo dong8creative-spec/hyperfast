@@ -8,78 +8,91 @@
 
     <style>
         /* =========================================
-           기본 스타일 및 레이아웃
+           기본 스타일
            ========================================= */
         body { margin: 0; background-color: #525659; overflow-x: hidden; user-select: none; font-family: 'pretendard', 'Noto Sans KR', sans-serif;}
         * { box-sizing: border-box; }
 
-        /* [요청3 반영] 플레이어 레이아웃 (좌:영상 / 우:타임스탬프) */
+        /* [핵심] 플레이어 레이아웃 (강제 가로 배치) */
         #video-overlay {
             position: fixed; top: 0; left: 0; width: 100%; height: 100%;
             background: rgba(0, 0, 0, 0.95); z-index: 9998; display: none;
-            flex-direction: column; justify-content: center; align-items: center;
+            justify-content: center; align-items: center; /* 중앙 정렬 */
         }
 
-        .player-container {
-            display: flex; width: 95%; max-width: 1600px; height: 80vh; gap: 20px;
-            align-items: flex-start; margin-top: 20px;
+        .player-box {
+            display: flex; /* 가로 배치 핵심 */
+            width: 90%; max-width: 1400px;
+            height: 70vh; /* 높이 고정 */
+            background: #111;
+            border-radius: 12px; overflow: hidden;
+            box-shadow: 0 0 50px rgba(0,0,0,0.5);
+            border: 1px solid #333;
         }
 
-        /* 왼쪽: 영상 영역 (비율 7) */
-        .video-section {
-            flex: 7; height: 100%; display: flex; flex-direction: column;
+        /* 왼쪽: 영상 영역 (70%) */
+        .video-area {
+            flex: 7; background: black; display: flex; flex-direction: column;
+            position: relative;
         }
-        .video-wrapper {
-            width: 100%; aspect-ratio: 16 / 9; background: #000;
-            box-shadow: 0 0 30px rgba(255,255,255,0.1); border-radius: 8px; overflow: hidden;
+        
+        /* 상단 강의 선택 버튼 (영상 위에 고정) */
+        .class-tabs {
+            display: flex; background: #222; border-bottom: 1px solid #444;
         }
+        .cls-btn {
+            flex: 1; padding: 15px; background: #222; color: #888; border: none;
+            cursor: pointer; font-weight: bold; font-size: 15px; border-right: 1px solid #333;
+            transition: 0.2s;
+        }
+        .cls-btn.active { background: #e74c3c; color: white; }
+        .cls-btn:hover:not(.active) { background: #333; color: white; }
+
+        /* 아이프레임 (꽉 차게) */
+        .iframe-wrap { flex: 1; width: 100%; position: relative; }
         iframe { width: 100%; height: 100%; border: none; }
+        /* [전체화면 방지] 투명 막 (필요시 사용, 지금은 유튜브 옵션으로 제어) */
 
-        /* 오른쪽: 타임스탬프 영역 (비율 3) */
-        .timestamp-section {
-            flex: 3; height: 100%; 
-            background: #222; border-radius: 12px;
-            display: flex; flex-direction: column; overflow: hidden;
-            border: 1px solid #444;
+        /* 오른쪽: 타임스탬프 영역 (30%) */
+        .timestamp-area {
+            flex: 3; background: #1a1a1a; border-left: 1px solid #333;
+            display: flex; flex-direction: column;
         }
-        .ts-header-box { padding: 20px; border-bottom: 1px solid #444; background: #2b2b2b; text-align: center; }
-        .ts-main-title { color: white; font-size: 18px; font-weight: 900; }
-
-        /* 스크롤 영역 */
-        .ts-scroll-area { flex: 1; overflow-y: auto; padding: 15px; }
-
-        /* 구분 타이틀 (Set up / Know-how / Tips) */
-        .category-title {
-            color: #e74c3c; font-size: 15px; font-weight: 900; margin-top: 20px; margin-bottom: 10px;
-            text-transform: uppercase; border-bottom: 1px solid #444; padding-bottom: 5px;
+        .ts-header {
+            padding: 20px; color: white; font-size: 18px; font-weight: 900;
+            border-bottom: 1px solid #333; background: #222; text-align: center;
         }
-        .category-title:first-child { margin-top: 0; }
-
-        /* 타임스탬프 버튼 디자인 (흰색 박스 + 검정 글씨) */
-        .ts-btn {
-            display: flex; width: 100%; align-items: center;
-            background: #ffffff; color: #111;
-            padding: 12px; margin-bottom: 8px; border-radius: 6px;
-            border: 1px solid #ccc; cursor: pointer; transition: all 0.2s;
-            font-size: 14px; font-weight: 600; text-align: left;
+        .ts-list {
+            flex: 1; overflow-y: auto; padding: 10px;
         }
-        .ts-btn:hover { background: #e74c3c; color: white; border-color: #c0392b; padding-left: 15px; }
-        .ts-time {
-            background: #000; color: #e74c3c; padding: 2px 6px; border-radius: 4px;
-            font-size: 11px; font-weight: bold; margin-right: 10px; min-width: 45px; text-align: center;
-            flex-shrink: 0;
-        }
-        .ts-btn:hover .ts-time { background: white; color: #e74c3c; }
 
-        /* 강의 선택 버튼 */
-        .class-selector { display: flex; gap: 10px; margin-bottom: 10px; width: 100%; justify-content: center; }
-        .class-btn { 
-            padding: 10px 20px; background: #444; color: #fff; 
-            border: none; border-radius: 20px; cursor: pointer; font-weight: bold; font-size: 14px;
+        /* 타임스탬프 버튼 */
+        .ts-item {
+            display: flex; align-items: center; width: 100%;
+            background: #2b2b2b; color: #ccc; padding: 12px; margin-bottom: 8px;
+            border-radius: 6px; cursor: pointer; border: 1px solid #333;
+            transition: 0.2s; text-align: left;
         }
-        .class-btn:hover, .class-btn.active { background: #e74c3c; }
+        .ts-item:hover { background: #e74c3c; color: white; border-color: #c0392b; padding-left: 15px;}
+        .ts-time-badge {
+            background: black; color: #e74c3c; padding: 3px 8px; border-radius: 4px;
+            font-size: 12px; font-weight: bold; margin-right: 10px; min-width: 50px; text-align: center;
+        }
+        .ts-item:hover .ts-time-badge { background: white; }
 
-        .close-video { position: absolute; top: 20px; right: 30px; color: white; font-size: 40px; cursor: pointer; font-weight: bold; z-index: 10001; }
+        /* 닫기 버튼 */
+        .close-btn {
+            position: absolute; top: 20px; right: 30px; z-index: 10000;
+            color: white; font-size: 40px; cursor: pointer; font-weight: bold;
+            text-shadow: 0 0 10px black;
+        }
+
+        /* 반응형 (모바일은 세로로) */
+        @media (max-width: 900px) {
+            .player-box { flex-direction: column; height: 90vh; }
+            .video-area { flex: none; height: 50%; }
+            .timestamp-area { flex: 1; }
+        }
 
         /* 플로팅 버튼 */
         #video-btn {
@@ -91,19 +104,8 @@
             border-radius: 25px; cursor: pointer;
             box-shadow: 0 4px 10px rgba(0,0,0,0.3); z-index: 900; transition: all 0.2s ease;
         }
-        #video-btn:hover { transform: translateY(-3px); background: #c0392b; box-shadow: 0 6px 15px rgba(0,0,0,0.4); }
 
-        /* 반응형 */
-        @media (max-width: 1000px) {
-            .player-container { flex-direction: column; height: auto; }
-            .video-section { width: 100%; flex: none; }
-            .timestamp-section { width: 100%; flex: none; height: 400px; margin-top: 20px; }
-            #login-overlay { flex-direction: column; position: absolute; height: auto; min-height: 100vh; }
-            .login-left-image { width: 100%; aspect-ratio: 1 / 1; max-height: none; }
-            .login-right-form { width: 100%; padding: 60px 20px; flex: none; }
-        }
-
-        /* --- 기존 로그인 스타일 --- */
+        /* 로그인 & 보안 스타일 유지 */
         #login-overlay { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: #fff; z-index: 9990; display: flex; overflow-y: auto; }
         .login-left-image { width: 50%; background-color: #f0f0f0; display: flex; justify-content: center; align-items: center; overflow: hidden; position: relative; }
         .login-left-image img { width: 100%; height: 100%; object-fit: cover; }
@@ -133,44 +135,41 @@
         <div class="login-right-form">
             <div class="form-container">
                 <h2>초고속 편집 실무반</h2>
-                <p class="desc">등록된 수강생 정보로 실시간 인증됩니다.<br>구글 명단 기반 자동 시스템</p>
+                <p class="desc">구글 명단 기반 인증 시스템<br>접속 기록이 서버에 저장됩니다.</p>
                 <p id="ip-display" style="color:#27ae60; font-weight:bold; margin-bottom:20px;">서버 연결 대기 중...</p>
-                
                 <input type="text" id="user-name" placeholder="성함 (등록된 실명 입력)">
                 <input type="text" id="access-code" placeholder="보안 코드 4자리 입력">
-                
                 <button id="login-btn" onclick="checkSheetAndLogin()">입장하기</button>
             </div>
         </div>
     </div>
 
     <div id="video-overlay">
-        <div class="close-video" onclick="closeVideoPlayer()">✕</div>
+        <div class="close-btn" onclick="closeVideoPlayer()">✕</div>
         
-        <div class="player-container">
-            <div class="video-section">
-                <div class="class-selector">
-                    <button class="class-btn" onclick="playVideo(0)">1강. OT</button>
-                    <button class="class-btn" onclick="playVideo(1)">2강. 컷편집</button>
-                    <button class="class-btn" onclick="playVideo(2)">3강. 자막</button>
+        <div class="player-box">
+            <div class="video-area">
+                <div class="class-tabs">
+                    <button class="cls-btn active" onclick="playVideo(0)">1강. OT</button>
+                    <button class="cls-btn" onclick="playVideo(1)">2강. 컷편집</button>
+                    <button class="cls-btn" onclick="playVideo(2)">3강. 자막</button>
                 </div>
-                <div class="video-wrapper">
-                    <iframe id="yt-player" src="" allow="autoplay; encrypted-media" allowfullscreen></iframe>
+                <div class="iframe-wrap">
+                    <iframe id="yt-player" src="" allow="autoplay; encrypted-media"></iframe>
                 </div>
             </div>
 
-            <div class="timestamp-section">
-                <div class="ts-header-box">
-                    <div class="ts-main-title">⏱️ 주요 장면 바로가기</div>
-                </div>
-                <div class="ts-scroll-area" id="ts-content">
-                    <div style="color:#999; text-align:center; margin-top:50px;">데이터 로딩 중...</div>
+            <div class="timestamp-area">
+                <div class="ts-header">⏱️ 타임스탬프 목록</div>
+                <div class="ts-list" id="ts-content">
+                    <div style="color:#777; text-align:center; margin-top:50px;">로딩 중...</div>
                 </div>
             </div>
         </div>
     </div>
 
     <div id="video-btn" onclick="openVideoPlayer()"><span>▶ 강의 다시보기</span></div>
+
     <div id="blur-overlay"><div style="font-size:24px; font-weight:bold;">화면을 클릭해주세요.</div></div>
     <div id="prtsc-blocker"><div style="font-size:60px; font-weight:900;">⚠️ 보안 경고 ⚠️</div></div>
     <div id="ban-overlay"><div style="font-size:80px;">🚫</div><div style="font-size:40px; font-weight:900;">ACCESS DENIED</div></div>
@@ -188,39 +187,34 @@
 
     <script>
         /* ============================================================
-           ★ [설정] 두 개의 구글 스프레드 시트 CSV 링크 입력 (필수) ★
+           ★ [설정] 구글 스프레드 시트 CSV 링크 (필수 입력) ★
            ============================================================ */
         const USER_SHEET_URL = "https://docs.google.com/spreadsheets/d/e/2PACX-1vTi1DDz4qoDr1avgqTieDiRqSW4oGSBMY-Oxk-gGPfb95piTB6Y2MgTbfJ66ahevUTzbM_gUhd2WtpC/pub?output=csv"; 
-        const TIMESTAMP_SHEET_URL = "여기에_타임스탬프_CSV링크"; 
+        const TIMESTAMP_SHEET_URL = "여기에_타임스탬프_CSV링크_붙여넣기"; 
 
-        /* 영상 ID 설정 (고정) */
-        const YOUTUBE_IDS = ["jNQXAC9IVRw", "M7lc1UVf-VE", "L_jWHffIx5E"]; // 1강, 2강, 3강 순서
+        /* 영상 ID (1강, 2강, 3강 순서) */
+        const YOUTUBE_IDS = ["jNQXAC9IVRw", "M7lc1UVf-VE", "L_jWHffIx5E"]; 
 
-        /* 전역 변수 */
-        let fetchedTimestamps = []; // 시트에서 가져온 타임스탬프 데이터 저장소
+        /* 변수 설정 */
+        let fetchedTimestamps = [];
         let clientIP = "IP 확인 중";
         let failCount = parseInt(localStorage.getItem('accessFailCount') || 0);
         const maxAttempts = 5;
 
-        // [초기화] 페이지 로드 시 타임스탬프 데이터 미리 가져오기
+        // 타임스탬프 미리 로딩
         fetch(TIMESTAMP_SHEET_URL)
             .then(res => res.text())
-            .then(text => {
-                fetchedTimestamps = parseCSV(text);
-                console.log("타임스탬프 로딩 완료:", fetchedTimestamps);
-            })
-            .catch(err => console.error("타임스탬프 로딩 실패:", err));
+            .then(text => { fetchedTimestamps = parseCSV(text); })
+            .catch(err => console.log("TS 로딩 실패(아직 링크 안 넣음):", err));
 
-        // CSV 파싱 함수 (공통)
         function parseCSV(text) {
             const rows = text.split('\n').map(row => row.split(','));
-            return rows.slice(1).map(r => r.map(c => c ? c.trim() : "")); // 헤더 제외하고 정리
+            return rows.slice(1).map(r => r.map(c => c ? c.trim() : ""));
         }
 
-        /* [관리자 프리패스] */
+        /* 관리자 프리패스 */
         (function() {
-            const urlParams = new URLSearchParams(window.location.search);
-            if (urlParams.get('admin') === 'pass') {
+            if (new URLSearchParams(window.location.search).get('admin') === 'pass') {
                 window.addEventListener('DOMContentLoaded', () => {
                      document.getElementById('ip-display').innerText = "✅ 관리자 프리패스";
                      document.getElementById('user-name').value = "관리자";
@@ -232,48 +226,38 @@
             }
         })();
 
-        /* [기능 1] 구글 시트 로그인 대조 */
+        /* 명단 확인 및 로그인 */
         async function checkSheetAndLogin() {
             if (failCount >= maxAttempts) { showBan(); return; }
-
             const name = document.getElementById('user-name').value.trim();
             const code = document.getElementById('access-code').value.trim();
             const btn = document.getElementById('login-btn');
             
             if(!name || !code) { alert("정보를 모두 입력해주세요."); return; }
-
             btn.disabled = true; btn.innerText = "확인 중...";
 
             try {
                 const res = await fetch(USER_SHEET_URL);
                 const text = await res.text();
-                const users = parseCSV(text); // [[이름, 코드], [홍길동, 1234]...]
-
-                // 일치 여부 확인
+                const users = parseCSV(text);
                 const found = users.find(u => u[0] === name && u[1] === code);
 
                 if (found) {
                     try { localStorage.removeItem('accessFailCount'); } catch(e){}
                     enterSuccess(name, code);
                 } else {
-                    handleFail();
+                    failCount++;
+                    localStorage.setItem('accessFailCount', failCount);
+                    btn.disabled = false; btn.innerText = "입장하기";
+                    if (maxAttempts - failCount <= 0) showBan();
+                    else {
+                        document.getElementById('error-msg').innerHTML = `정보 불일치.<br>(남은 기회: ${maxAttempts - failCount}회)`;
+                        document.getElementById('error-modal').style.display = 'flex';
+                    }
                 }
             } catch (e) {
-                alert("서버 연결 실패. 관리자에게 문의하세요.");
+                alert("서버 연결 실패. 링크를 확인하세요.");
                 btn.disabled = false; btn.innerText = "입장하기";
-            }
-        }
-
-        function handleFail() {
-            failCount++;
-            localStorage.setItem('accessFailCount', failCount);
-            document.getElementById('login-btn').disabled = false;
-            document.getElementById('login-btn').innerText = "입장하기";
-            
-            if (maxAttempts - failCount <= 0) showBan();
-            else {
-                document.getElementById('error-msg').innerHTML = `정보 불일치.<br><strong style="color:red;">(남은 기회: ${maxAttempts - failCount}회)</strong>`;
-                document.getElementById('error-modal').style.display = 'flex';
             }
         }
 
@@ -283,83 +267,60 @@
             document.getElementById('watermark-layer').style.display = 'block';
             document.getElementById('video-btn').style.display = 'flex';
             renderPDF();
-            initWatermark(`${code} / ${clientIP} / ${name}`);
+            // [요청 반영] 워터마크 문구 수정
+            initWatermark(`${code} / ${clientIP} / ${name} / 유출 시 모든 책임은 저 스스로에게 있습니다`);
         }
 
-        /* [기능 2 & 3] 영상 재생 및 동적 타임스탬프 렌더링 */
+        /* 영상 플레이어 및 타임스탬프 로직 */
         function openVideoPlayer() { document.getElementById('video-overlay').style.display = 'flex'; playVideo(0); }
         function closeVideoPlayer() { document.getElementById('video-overlay').style.display = 'none'; document.getElementById('yt-player').src = ""; }
 
         function playVideo(index) {
-            // 1. 영상 재생
+            // 1. 영상 재생 (fs=0 으로 전체화면 버튼 숨김)
             const vid = YOUTUBE_IDS[index];
-            document.getElementById('yt-player').src = `https://www.youtube.com/embed/${vid}?autoplay=1&rel=0&modestbranding=1&enablejsapi=1&controls=1`;
+            document.getElementById('yt-player').src = `https://www.youtube.com/embed/${vid}?autoplay=1&rel=0&modestbranding=1&enablejsapi=1&fs=0`;
 
-            // 2. 버튼 스타일 활성화
-            document.querySelectorAll('.class-btn').forEach((b, i) => {
-                b.style.background = (i === index) ? '#e74c3c' : '#444';
+            // 2. 탭 활성화 표시
+            document.querySelectorAll('.cls-btn').forEach((b, i) => {
+                b.className = (i === index) ? 'cls-btn active' : 'cls-btn';
             });
 
-            // 3. 타임스탬프 필터링 및 렌더링 (핵심)
-            // 시트의 A열(강의번호)이 현재 index+1 과 같은 것만 가져옴
+            // 3. 타임스탬프 필터링 (A열이 index+1 인 것만)
             const currentData = fetchedTimestamps.filter(row => parseInt(row[0]) === index + 1);
-            
-            // 카테고리별 분류
-            const categories = { 'setup': [], 'knowhow': [], 'tips': [] };
-            currentData.forEach(row => {
-                const type = row[1]; // setup, knowhow, tips
-                if(categories[type]) categories[type].push({ time: row[2], label: row[3] });
-            });
-
-            // HTML 생성
             const container = document.getElementById('ts-content');
             container.innerHTML = "";
 
-            // 없는 경우 처리
             if(currentData.length === 0) {
-                container.innerHTML = "<div style='color:#777; padding:20px; text-align:center;'>등록된 타임스탬프가 없습니다.</div>";
-                return;
+                container.innerHTML = "<div style='color:#777; text-align:center; padding:20px;'>타임스탬프가 없습니다.</div>";
+            } else {
+                currentData.forEach(row => {
+                    // B열:초, C열:내용
+                    const seconds = parseInt(row[1]); 
+                    const label = row[2];
+                    
+                    const min = Math.floor(seconds / 60);
+                    const sec = seconds % 60;
+                    const timeStr = `${min}:${sec.toString().padStart(2, '0')}`;
+
+                    const btn = document.createElement('div');
+                    btn.className = 'ts-item';
+                    btn.innerHTML = `<span class="ts-time-badge">${timeStr}</span> ${label}`;
+                    btn.onclick = () => seekTo(seconds);
+                    container.appendChild(btn);
+                });
             }
-
-            // 카테고리 순서대로 뿌리기
-            const drawCategory = (key, title) => {
-                if(categories[key].length > 0) {
-                    const titleEl = document.createElement('div');
-                    titleEl.className = 'category-title';
-                    titleEl.innerText = title;
-                    container.appendChild(titleEl);
-
-                    categories[key].forEach(item => {
-                        const btn = document.createElement('button');
-                        btn.className = 'ts-btn';
-                        // 시간 포맷팅 (초 -> 분:초)
-                        const min = Math.floor(item.time / 60);
-                        const sec = item.time % 60;
-                        const timeStr = `${min}:${sec.toString().padStart(2, '0')}`;
-                        
-                        btn.innerHTML = `<span class="ts-time">${timeStr}</span> ${item.label}`;
-                        btn.onclick = () => seekTo(item.time);
-                        container.appendChild(btn);
-                    });
-                }
-            };
-
-            drawCategory('setup', '1. Set up');
-            drawCategory('knowhow', '2. Know-how');
-            drawCategory('tips', '3. Tips');
         }
 
         function seekTo(seconds) {
             document.getElementById('yt-player').contentWindow.postMessage(JSON.stringify({ event: 'command', func: 'seekTo', args: [seconds, true] }), '*');
         }
 
-        /* 기타: PDF, 워터마크, IP, 보안 */
+        /* 기타: PDF, 워터마크, IP */
         fetch('https://api.ipify.org?format=json').then(r=>r.json()).then(d=>{clientIP=d.ip; document.getElementById('ip-display').innerText=`접속 IP: ${clientIP}`;});
         function showBan() { document.getElementById('login-overlay').style.display = 'none'; document.getElementById('ban-overlay').style.display = 'flex'; }
         function closePopup() { document.getElementById('error-modal').style.display = 'none'; }
         
         async function renderPDF() {
-            /* PDF 렌더링 코드 유지 (생략 없이 사용하세요) */
             try {
                 pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/2.16.105/pdf.worker.min.js';
                 const pdf = await pdfjsLib.getDocument('./hhyperfastt.pdf').promise;
@@ -402,4 +363,3 @@
     </script>
 </body>
 </html>
-```
