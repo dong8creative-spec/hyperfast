@@ -8,93 +8,96 @@
 
     <style>
         /* =========================================
-           기본 스타일
+           기본 스타일 & 레이아웃
            ========================================= */
         body { margin: 0; background-color: #525659; overflow-x: hidden; user-select: none; font-family: 'pretendard', 'Noto Sans KR', sans-serif;}
         * { box-sizing: border-box; }
 
-        /* [핵심] 플레이어 레이아웃 (강제 가로 배치) */
+        /* [핵심] 플레이어 레이아웃 (좌우 분할 고정) */
         #video-overlay {
             position: fixed; top: 0; left: 0; width: 100%; height: 100%;
             background: rgba(0, 0, 0, 0.95); z-index: 9998; display: none;
-            justify-content: center; align-items: center; /* 중앙 정렬 */
+            justify-content: center; align-items: center;
         }
 
         .player-box {
-            display: flex; /* 가로 배치 핵심 */
-            width: 90%; max-width: 1400px;
-            height: 70vh; /* 높이 고정 */
-            background: #111;
-            border-radius: 12px; overflow: hidden;
-            box-shadow: 0 0 50px rgba(0,0,0,0.5);
-            border: 1px solid #333;
+            display: flex; /* 가로 배치 */
+            width: 95%; max-width: 1500px;
+            height: 80vh; /* 높이 80% 사용 */
+            background: #111; border-radius: 12px; overflow: hidden;
+            box-shadow: 0 0 50px rgba(0,0,0,0.6); border: 1px solid #333;
         }
 
-        /* 왼쪽: 영상 영역 (70%) */
+        /* 왼쪽: 영상 영역 (75%) */
         .video-area {
-            flex: 7; background: black; display: flex; flex-direction: column;
-            position: relative;
+            flex: 7.5; background: black; display: flex; flex-direction: column;
+            position: relative; border-right: 1px solid #333;
         }
         
-        /* 상단 강의 선택 버튼 (영상 위에 고정) */
+        /* 상단 강의 선택 탭 */
         .class-tabs {
-            display: flex; background: #222; border-bottom: 1px solid #444;
+            display: flex; background: #222; border-bottom: 1px solid #444; height: 50px;
         }
         .cls-btn {
-            flex: 1; padding: 15px; background: #222; color: #888; border: none;
+            flex: 1; background: #222; color: #888; border: none;
             cursor: pointer; font-weight: bold; font-size: 15px; border-right: 1px solid #333;
             transition: 0.2s;
         }
         .cls-btn.active { background: #e74c3c; color: white; }
         .cls-btn:hover:not(.active) { background: #333; color: white; }
 
-        /* 아이프레임 (꽉 차게) */
+        /* 아이프레임 영역 */
         .iframe-wrap { flex: 1; width: 100%; position: relative; }
         iframe { width: 100%; height: 100%; border: none; }
-        /* [전체화면 방지] 투명 막 (필요시 사용, 지금은 유튜브 옵션으로 제어) */
 
-        /* 오른쪽: 타임스탬프 영역 (30%) */
+        /* 오른쪽: 타임스탬프 영역 (25%) */
         .timestamp-area {
-            flex: 3; background: #1a1a1a; border-left: 1px solid #333;
-            display: flex; flex-direction: column;
+            flex: 2.5; background: #1a1a1a; display: flex; flex-direction: column;
         }
         .ts-header {
-            padding: 20px; color: white; font-size: 18px; font-weight: 900;
+            padding: 15px; color: white; font-size: 16px; font-weight: 900;
             border-bottom: 1px solid #333; background: #222; text-align: center;
         }
         .ts-list {
             flex: 1; overflow-y: auto; padding: 10px;
         }
+        /* 스크롤바 디자인 */
+        .ts-list::-webkit-scrollbar { width: 8px; }
+        .ts-list::-webkit-scrollbar-thumb { background: #444; border-radius: 4px; }
+        .ts-list::-webkit-scrollbar-track { background: #1a1a1a; }
 
-        /* 타임스탬프 버튼 */
+        /* 타임스탬프 버튼 스타일 */
         .ts-item {
             display: flex; align-items: center; width: 100%;
             background: #2b2b2b; color: #ccc; padding: 12px; margin-bottom: 8px;
             border-radius: 6px; cursor: pointer; border: 1px solid #333;
-            transition: 0.2s; text-align: left;
+            transition: 0.2s; text-align: left; font-size: 14px;
         }
         .ts-item:hover { background: #e74c3c; color: white; border-color: #c0392b; padding-left: 15px;}
         .ts-time-badge {
-            background: black; color: #e74c3c; padding: 3px 8px; border-radius: 4px;
-            font-size: 12px; font-weight: bold; margin-right: 10px; min-width: 50px; text-align: center;
+            background: black; color: #e74c3c; padding: 2px 6px; border-radius: 4px;
+            font-size: 11px; font-weight: bold; margin-right: 10px; min-width: 45px; text-align: center; flex-shrink: 0;
         }
         .ts-item:hover .ts-time-badge { background: white; }
 
         /* 닫기 버튼 */
         .close-btn {
-            position: absolute; top: 20px; right: 30px; z-index: 10000;
-            color: white; font-size: 40px; cursor: pointer; font-weight: bold;
-            text-shadow: 0 0 10px black;
+            position: absolute; top: 15px; right: 25px; z-index: 10000;
+            color: white; font-size: 30px; cursor: pointer; font-weight: bold;
+            opacity: 0.8; transition: 0.2s;
         }
+        .close-btn:hover { opacity: 1; transform: scale(1.1); }
 
-        /* 반응형 (모바일은 세로로) */
-        @media (max-width: 900px) {
+        /* 반응형 (모바일 세로 배치) */
+        @media (max-width: 1000px) {
             .player-box { flex-direction: column; height: 90vh; }
-            .video-area { flex: none; height: 50%; }
+            .video-area { flex: none; height: 45%; border-right: none; border-bottom: 1px solid #333; }
             .timestamp-area { flex: 1; }
+            .class-tabs { height: 40px; }
+            .cls-btn { font-size: 13px; }
         }
 
-        /* 플로팅 버튼 */
+        /* 하단 플로팅 버튼 */
         #video-btn {
             position: fixed; bottom: 25px; right: 25px;
             background: #e74c3c; color: white;
@@ -104,8 +107,9 @@
             border-radius: 25px; cursor: pointer;
             box-shadow: 0 4px 10px rgba(0,0,0,0.3); z-index: 900; transition: all 0.2s ease;
         }
+        #video-btn:hover { transform: translateY(-3px); background: #c0392b; }
 
-        /* 로그인 & 보안 스타일 유지 */
+        /* 로그인 & 보안 스타일 */
         #login-overlay { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: #fff; z-index: 9990; display: flex; overflow-y: auto; }
         .login-left-image { width: 50%; background-color: #f0f0f0; display: flex; justify-content: center; align-items: center; overflow: hidden; position: relative; }
         .login-left-image img { width: 100%; height: 100%; object-fit: cover; }
@@ -125,7 +129,7 @@
         #pdf-container { display: flex; flex-direction: column; align-items: center; padding: 20px 0; display: none; }
         canvas { margin-bottom: 20px; box-shadow: 0 5px 25px rgba(0,0,0,0.5); max-width: 100%; height: auto; }
         #watermark-layer { position: fixed; top: 0; left: 0; width: 100%; height: 100%; pointer-events: none; z-index: 9999; display: none; overflow: hidden; }
-        .bouncing-text { position: absolute; font-size: 18px; font-weight: 900; color: rgba(255, 255, 255, 0.18); white-space: nowrap; user-select: none; }
+        .bouncing-text { position: absolute; font-size: 18px; font-weight: 900; color: rgba(255, 255, 255, 0.18); white-space: nowrap; user-select: none; text-shadow: 1px 1px 4px rgba(0,0,0,0.8); }
     </style>
 </head>
 <body oncontextmenu="return false" ondragstart="return false">
@@ -135,7 +139,7 @@
         <div class="login-right-form">
             <div class="form-container">
                 <h2>초고속 편집 실무반</h2>
-                <p class="desc">구글 명단 기반 인증 시스템<br>접속 기록이 서버에 저장됩니다.</p>
+                <p class="desc">구글 명단 기반 인증 시스템<br>접속 기록이 실시간으로 확인됩니다.</p>
                 <p id="ip-display" style="color:#27ae60; font-weight:bold; margin-bottom:20px;">서버 연결 대기 중...</p>
                 <input type="text" id="user-name" placeholder="성함 (등록된 실명 입력)">
                 <input type="text" id="access-code" placeholder="보안 코드 4자리 입력">
@@ -150,9 +154,9 @@
         <div class="player-box">
             <div class="video-area">
                 <div class="class-tabs">
-                    <button class="cls-btn active" onclick="playVideo(0)">1강. OT</button>
-                    <button class="cls-btn" onclick="playVideo(1)">2강. 컷편집</button>
-                    <button class="cls-btn" onclick="playVideo(2)">3강. 자막</button>
+                    <button class="cls-btn active" onclick="playVideo(0)">1.기본설정</button>
+                    <button class="cls-btn" onclick="playVideo(1)">2. 작업 노하우</button>
+                    <button class="cls-btn" onclick="playVideo(2)">3. 실제 작업 시 속도 개선 팁</button>
                 </div>
                 <div class="iframe-wrap">
                     <iframe id="yt-player" src="" allow="autoplay; encrypted-media"></iframe>
@@ -162,7 +166,7 @@
             <div class="timestamp-area">
                 <div class="ts-header">⏱️ 타임스탬프 목록</div>
                 <div class="ts-list" id="ts-content">
-                    <div style="color:#777; text-align:center; margin-top:50px;">로딩 중...</div>
+                    <div style="color:#777; text-align:center; margin-top:50px;">데이터 로딩 중...</div>
                 </div>
             </div>
         </div>
@@ -187,10 +191,10 @@
 
     <script>
         /* ============================================================
-           ★ [설정] 구글 스프레드 시트 CSV 링크 (필수 입력) ★
+           ★ [설정] 구글 스프레드 시트 CSV 링크 (자동 적용됨) ★
            ============================================================ */
-        const USER_SHEET_URL = "https://docs.google.com/spreadsheets/d/e/2PACX-1vTi1DDz4qoDr1avgqTieDiRqSW4oGSBMY-Oxk-gGPfb95piTB6Y2MgTbfJ66ahevUTzbM_gUhd2WtpC/pub?output=csv"; 
-        const TIMESTAMP_SHEET_URL = "여기에_타임스탬프_CSV링크_붙여넣기"; 
+        const USER_SHEET_URL = "https://docs.google.com/spreadsheets/d/e/2PACX-1vTi1DDz4qoDr1avgqTieDiRqSW4oGSBMY-Oxk-gGPfb95piTB6Y2MgTbfJ66ahevUTzbM_gUhd2WtpC/pub?output=csv";
+        const TIMESTAMP_SHEET_URL = "https://docs.google.com/spreadsheets/d/e/2PACX-1vRyPyC0zpg7zbQnjQihokiUKUK0cqLhabNMafQ1cYbp5XLbLkTGyx_y17QDtazCo_rTHiFjYB1UD6DI/pub?output=csv"; 
 
         /* 영상 ID (1강, 2강, 3강 순서) */
         const YOUTUBE_IDS = ["jNQXAC9IVRw", "M7lc1UVf-VE", "L_jWHffIx5E"]; 
@@ -201,15 +205,27 @@
         let failCount = parseInt(localStorage.getItem('accessFailCount') || 0);
         const maxAttempts = 5;
 
-        // 타임스탬프 미리 로딩
+        // [초기화] 타임스탬프 데이터 미리 가져오기
         fetch(TIMESTAMP_SHEET_URL)
-            .then(res => res.text())
-            .then(text => { fetchedTimestamps = parseCSV(text); })
-            .catch(err => console.log("TS 로딩 실패(아직 링크 안 넣음):", err));
+            .then(res => {
+                if(!res.ok) throw new Error("네트워크 오류");
+                return res.text();
+            })
+            .then(text => {
+                fetchedTimestamps = parseCSV(text);
+                console.log("타임스탬프 로드 완료:", fetchedTimestamps.length + "개");
+            })
+            .catch(err => {
+                console.error("타임스탬프 로드 실패:", err);
+                // 실패 시 재시도 로직 (선택사항)
+            });
 
+        // CSV 파싱 함수
         function parseCSV(text) {
-            const rows = text.split('\n').map(row => row.split(','));
-            return rows.slice(1).map(r => r.map(c => c ? c.trim() : ""));
+            // 줄바꿈 처리 (\r\n, \n 모두 대응)
+            const rows = text.split(/\r?\n/).map(row => row.split(','));
+            // 헤더(첫 줄) 제외하고, 데이터가 있는 행만 필터링
+            return rows.slice(1).map(r => r.map(c => c ? c.trim() : "")).filter(r => r.length > 1 && r[0]);
         }
 
         /* 관리자 프리패스 */
@@ -238,8 +254,11 @@
 
             try {
                 const res = await fetch(USER_SHEET_URL);
+                if(!res.ok) throw new Error("시트 연결 실패");
                 const text = await res.text();
                 const users = parseCSV(text);
+                
+                // 일치하는 사용자 찾기 (이름 & 코드)
                 const found = users.find(u => u[0] === name && u[1] === code);
 
                 if (found) {
@@ -256,7 +275,8 @@
                     }
                 }
             } catch (e) {
-                alert("서버 연결 실패. 링크를 확인하세요.");
+                console.error(e);
+                alert("서버 명단을 불러오지 못했습니다.\n잠시 후 다시 시도하거나 관리자에게 문의하세요.");
                 btn.disabled = false; btn.innerText = "입장하기";
             }
         }
@@ -286,6 +306,7 @@
             });
 
             // 3. 타임스탬프 필터링 (A열이 index+1 인 것만)
+            // 주의: CSV에서 읽어온 값은 문자열이므로 parseInt로 비교
             const currentData = fetchedTimestamps.filter(row => parseInt(row[0]) === index + 1);
             const container = document.getElementById('ts-content');
             container.innerHTML = "";
@@ -298,15 +319,17 @@
                     const seconds = parseInt(row[1]); 
                     const label = row[2];
                     
-                    const min = Math.floor(seconds / 60);
-                    const sec = seconds % 60;
-                    const timeStr = `${min}:${sec.toString().padStart(2, '0')}`;
+                    if(!isNaN(seconds) && label) {
+                        const min = Math.floor(seconds / 60);
+                        const sec = seconds % 60;
+                        const timeStr = `${min}:${sec.toString().padStart(2, '0')}`;
 
-                    const btn = document.createElement('div');
-                    btn.className = 'ts-item';
-                    btn.innerHTML = `<span class="ts-time-badge">${timeStr}</span> ${label}`;
-                    btn.onclick = () => seekTo(seconds);
-                    container.appendChild(btn);
+                        const btn = document.createElement('div');
+                        btn.className = 'ts-item';
+                        btn.innerHTML = `<span class="ts-time-badge">${timeStr}</span> ${label}`;
+                        btn.onclick = () => seekTo(seconds);
+                        container.appendChild(btn);
+                    }
                 });
             }
         }
