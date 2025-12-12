@@ -13,6 +13,54 @@
         body { margin: 0; background-color: #525659; overflow-x: hidden; user-select: none; font-family: 'pretendard', 'Noto Sans KR', sans-serif;}
         * { box-sizing: border-box; }
 
+        /* [NEW] 우측 하단 강의보기 버튼 (초기엔 숨김) */
+        #video-btn {
+            width: 300px; height: 100px;
+            position: fixed; bottom: 30px; right: 30px;
+            background: #e74c3c; color: white;
+            font-size: 24px; font-weight: 900;
+            display: none; /* PDF 로딩 후 block으로 변경됨 */
+            justify-content: center; align-items: center;
+            border-radius: 12px; cursor: pointer;
+            box-shadow: 0 10px 20px rgba(0,0,0,0.5);
+            z-index: 900; /* 워터마크보단 아래 */
+            transition: transform 0.2s;
+        }
+        #video-btn:hover { transform: scale(1.05); background: #c0392b; }
+
+        /* [NEW] 유튜브 플레이어 오버레이 (모달) */
+        #video-overlay {
+            position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+            background: rgba(0, 0, 0, 0.95);
+            z-index: 9998; /* 워터마크(9999) 바로 아래 */
+            display: none;
+            flex-direction: column; justify-content: center; align-items: center;
+        }
+        
+        /* 영상 컨테이너 (1920x1080 비율 유지) */
+        .video-wrapper {
+            width: 100%; max-width: 1500px; /* 화면 꽉 차게 */
+            aspect-ratio: 16 / 9; /* 1920:1080 비율 고정 */
+            background: #000;
+            position: relative;
+            box-shadow: 0 0 30px rgba(255,255,255,0.1);
+        }
+        iframe { width: 100%; height: 100%; border: none; }
+
+        /* 영상 선택 버튼들 */
+        .video-selector {
+            margin-top: 30px; display: flex; gap: 20px;
+        }
+        .vid-btn {
+            padding: 15px 30px; background: #333; color: white;
+            border: 1px solid #555; cursor: pointer; font-size: 16px; border-radius: 5px;
+        }
+        .vid-btn:hover { background: #555; }
+        .close-video {
+            position: absolute; top: 20px; right: 30px;
+            color: white; font-size: 40px; cursor: pointer; font-weight: bold;
+        }
+
         /* [보안] 인쇄(Ctrl+P) 시도 시 강제로 내용 숨김 */
         @media print {
             body * { display: none !important; }
@@ -26,9 +74,8 @@
         /* [보안] 화면 가림막 (포커스 잃었을 때) */
         #blur-overlay {
             position: fixed; top: 0; left: 0; width: 100%; height: 100%;
-            background: rgba(0, 0, 0, 0.95); /* 아주 어둡게 가림 */
-            z-index: 99995; 
-            display: none;
+            background: rgba(0, 0, 0, 0.95); 
+            z-index: 99995; display: none;
             flex-direction: column; justify-content: center; align-items: center;
             color: white; text-align: center;
         }
@@ -124,16 +171,18 @@
             margin-bottom: 20px; box-shadow: 0 5px 25px rgba(0,0,0,0.5); max-width: 100%; height: auto;
         }
 
-        /* 워터마크 */
+        /* 워터마크 (최상위) */
         #watermark-layer {
             position: fixed; top: 0; left: 0; width: 100%; height: 100%;
-            pointer-events: none; z-index: 999; display: none; overflow: hidden;
+            pointer-events: none; /* 클릭 통과 (필수) */
+            z-index: 9999; /* 영상 모달(9998)보다 위 */
+            display: none; overflow: hidden;
         }
         .bouncing-text {
             position: absolute;
-            font-size: 20px; font-weight: 900; color: rgba(0, 0, 0, 0.15); /* 다시 연한 검정으로 복구 */
+            font-size: 20px; font-weight: 900; color: rgba(255, 255, 255, 0.15); 
             white-space: nowrap; user-select: none;
-            text-shadow: 1px 1px 2px rgba(255, 255, 255, 0.5);
+            text-shadow: 1px 1px 2px rgba(0, 0, 0, 0.5);
         }
 
         /* 모바일 반응형 */
@@ -141,10 +190,30 @@
             #login-overlay { flex-direction: column; position: absolute; height: auto; min-height: 100vh; }
             .login-left-image { width: 100%; aspect-ratio: 1 / 1; max-height: none; }
             .login-right-form { width: 100%; padding: 60px 20px; flex: none; }
+            #video-btn { width: 90%; right: 5%; bottom: 20px; font-size: 18px; height: 60px;}
+            .video-selector { flex-direction: column; width: 90%; }
         }
     </style>
 </head>
 <body oncontextmenu="return false" ondragstart="return false">
+
+    <div id="video-overlay">
+        <div class="close-video" onclick="closeVideoPlayer()">✕</div>
+        
+        <div class="video-wrapper">
+            <iframe id="yt-player" src="" allow="autoplay; encrypted-media" allowfullscreen></iframe>
+        </div>
+
+        <div class="video-selector">
+            <button class="vid-btn" onclick="playVideo(0)">1강. 오리엔테이션</button>
+            <button class="vid-btn" onclick="playVideo(1)">2강. 컷편집 기초</button>
+            <button class="vid-btn" onclick="playVideo(2)">3강. 자막과 효과</button>
+        </div>
+    </div>
+
+    <div id="video-btn" onclick="openVideoPlayer()">
+        ▶ 강의영상 다시보기
+    </div>
 
     <div id="blur-overlay">
         <div class="blur-msg">
@@ -208,6 +277,13 @@
         const watermarkCount = 3; 
         const maxAttempts = 5; 
 
+        // ★★★ 여기에 유튜브 영상 ID를 넣으세요 (3개) ★★★
+        const youtubeLinks = [
+            "jNQXAC9IVRw",  // 1번 영상 (예: Me at the zoo)
+            "M7lc1UVf-VE",  // 2번 영상
+            "L_jWHffIx5E"   // 3번 영상
+        ];
+
         /* 시스템 로직 */
         let clientIP = "IP 추적 불가";
         let failCount = localStorage.getItem('accessFailCount') ? parseInt(localStorage.getItem('accessFailCount')) : 0;
@@ -216,78 +292,58 @@
         if (failCount >= maxAttempts) showBanScreen();
 
         fetch('https://api.ipify.org?format=json')
-            .then(r => r.json()).then(d => {
-                clientIP = d.ip;
-                document.getElementById('ip-display').innerText = `접속 IP: ${clientIP} (기록됨)`;
+            .then(r => r.json()).then(d => { clientIP = d.ip; document.getElementById('ip-display').innerText = `접속 IP: ${clientIP} (기록됨)`; })
+            .catch(() => {
+                fetch('https://ipapi.co/json/').then(r => r.json()).then(d => { clientIP = d.ip; document.getElementById('ip-display').innerText = `접속 IP: ${clientIP} (기록됨)`; })
+                .catch(() => { document.getElementById('ip-display').innerHTML = "IP: <span style='color:red'>추적 차단됨(AdBlock)</span>"; });
             });
 
         pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/2.16.105/pdf.worker.min.js';
 
-        // 1. [보안] 캡처 감지 (키보드) - 윈도우/맥 통합
+        /* 유튜브 플레이어 제어 함수 */
+        function openVideoPlayer() {
+            document.getElementById('video-overlay').style.display = 'flex';
+            playVideo(0); // 기본적으로 1번 영상 재생
+        }
+
+        function closeVideoPlayer() {
+            document.getElementById('video-overlay').style.display = 'none';
+            document.getElementById('yt-player').src = ""; // 영상 멈춤
+        }
+
+        function playVideo(index) {
+            const videoId = youtubeLinks[index];
+            // 유튜브 주소 생성 (자동재생, 보안강화 옵션 포함)
+            const embedUrl = `https://www.youtube.com/embed/${videoId}?autoplay=1&rel=0&modestbranding=1`;
+            document.getElementById('yt-player').src = embedUrl;
+        }
+
+        /* 보안 로직 (캡처 차단) */
         function triggerSecurityBreach() {
             const blocker = document.getElementById('prtsc-blocker');
             blocker.style.display = 'flex';
             failCount = maxAttempts;
             localStorage.setItem('accessFailCount', failCount);
-            setTimeout(function() {
-                blocker.style.display = 'none';
-                showBanScreen();
-            }, 1500);
+            setTimeout(() => { blocker.style.display = 'none'; showBanScreen(); }, 1500);
         }
 
-        // keyup 이벤트로 PrintScreen 감지 (호환성 UP)
-        document.addEventListener('keyup', function(e) {
-            if (e.key === "PrintScreen") triggerSecurityBreach();
-        });
-
-        // keydown 이벤트로 Mac 단축키 등 감지
-        document.addEventListener('keydown', function(event) {
-            // Windows PrintScreen
-            if (event.key === "PrintScreen") {
-                triggerSecurityBreach();
-                return;
-            }
-            // Mac Capture Shortcuts (Cmd + Shift + 3/4/5)
-            if (event.metaKey && event.shiftKey) {
-                if (event.key === '3' || event.key === '4' || event.key === '5') {
-                    triggerSecurityBreach();
-                    event.preventDefault();
-                    return;
-                }
-            }
-            // 엔터키 입장
+        document.addEventListener('keyup', (e) => { if (e.key === "PrintScreen") triggerSecurityBreach(); });
+        document.addEventListener('keydown', (event) => {
+            if (event.key === "PrintScreen") { triggerSecurityBreach(); return; }
+            if (event.metaKey && event.shiftKey && ['3','4','5'].includes(event.key)) { triggerSecurityBreach(); event.preventDefault(); return; }
             if (event.key === "Enter") {
                 const modal = document.getElementById('error-modal');
-                if (document.getElementById('ban-overlay').style.display === 'flex') return; 
+                if (document.getElementById('ban-overlay').style.display === 'flex') return;
                 if (modal.style.display === 'flex') { closePopup(); return; }
                 if (document.activeElement === document.getElementById('access-code')) startViewer();
             }
         });
 
-        // 2. [보안] 윈도우 포커스 이탈 감지 (캡처 도구 실행 시 화면 가림)
-        window.addEventListener('blur', function() {
-            if (isLoggedIn) {
-                document.getElementById('blur-overlay').style.display = 'flex';
-            }
-        });
-        window.addEventListener('focus', function() {
-            if (isLoggedIn) {
-                document.getElementById('blur-overlay').style.display = 'none';
-            }
-        });
-
-        // 마우스 이탈 감지 (선택 사항: 불편하면 이 부분 삭제 가능)
-        document.addEventListener('mouseleave', function() {
-            if (isLoggedIn) {
-                document.getElementById('blur-overlay').style.display = 'flex';
-            }
-        });
-        document.addEventListener('mouseenter', function() {
-            if (isLoggedIn) {
-                document.getElementById('blur-overlay').style.display = 'none';
-            }
-        });
-
+        // 블러 처리 (로그인 상태일 때만)
+        window.addEventListener('blur', () => { if(isLoggedIn) document.getElementById('blur-overlay').style.display = 'flex'; });
+        window.addEventListener('focus', () => { if(isLoggedIn) document.getElementById('blur-overlay').style.display = 'none'; });
+        document.addEventListener('mouseleave', () => { if(isLoggedIn) document.getElementById('blur-overlay').style.display = 'flex'; });
+        document.addEventListener('mouseenter', () => { if(isLoggedIn) document.getElementById('blur-overlay').style.display = 'none'; });
 
         function startViewer() {
             if (failCount >= maxAttempts) { showBanScreen(); return; }
@@ -302,13 +358,14 @@
                 document.getElementById('watermark-layer').style.display = 'block'; 
                 
                 const secureText = `${inputCode} / ${clientIP} / 유출금지`;
-                renderPDF();
+                renderPDF(); // PDF 로딩 시작
                 initBouncingWatermarks(secureText); 
             } else {
                 failCount++;
                 localStorage.setItem('accessFailCount', failCount);
                 const remaining = maxAttempts - failCount;
-                if (remaining <= 0) { showBanScreen(); } else {
+                if (remaining <= 0) showBanScreen();
+                else {
                     document.getElementById('error-msg').innerHTML = `코드 오류.<br><strong style="color:red;">(남은 기회: ${remaining}회)</strong><br>5회 오류 시 영구 차단.`;
                     openPopup();
                 }
@@ -319,7 +376,7 @@
             document.getElementById('login-overlay').style.display = 'none';
             document.getElementById('error-modal').style.display = 'none';
             document.getElementById('ban-overlay').style.display = 'flex';
-            document.getElementById('blur-overlay').style.display = 'none'; // 차단화면 잘 보이게 블러 끔
+            document.getElementById('blur-overlay').style.display = 'none';
         }
         function openPopup() { document.getElementById('error-modal').style.display = 'flex'; }
         function closePopup() { 
@@ -332,53 +389,4 @@
             try {
                 const loadingTask = pdfjsLib.getDocument({
                     url: pdfUrl,
-                    cMapUrl: 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/2.16.105/cmaps/',
-                    cMapPacked: true,
-                });
-                const pdf = await loadingTask.promise;
-                const container = document.getElementById('pdf-container');
-                for (let pageNum = 1; pageNum <= pdf.numPages; pageNum++) {
-                    const page = await pdf.getPage(pageNum);
-                    const scale = 1.5; 
-                    const viewport = page.getViewport({ scale: scale });
-                    const canvas = document.createElement('canvas');
-                    const context = canvas.getContext('2d');
-                    canvas.height = viewport.height;
-                    canvas.width = viewport.width;
-                    container.appendChild(canvas);
-                    await page.render({ canvasContext: context, viewport: viewport }).promise;
-                }
-            } catch (error) { alert("PDF 로딩 실패."); }
-        }
-
-        function initBouncingWatermarks(text) {
-            const container = document.getElementById('watermark-layer');
-            const marks = [];
-            for (let i = 0; i < watermarkCount; i++) {
-                const el = document.createElement('div');
-                el.className = 'bouncing-text';
-                el.innerText = text;
-                container.appendChild(el);
-                marks.push({
-                    el: el, x: Math.random() * (window.innerWidth - 200), y: Math.random() * (window.innerHeight - 50),
-                    dx: (Math.random() - 0.5) * 1, dy: (Math.random() - 0.5) * 1  
-                });
-            }
-            function animate() {
-                const width = window.innerWidth; const height = window.innerHeight;
-                marks.forEach(mark => {
-                    mark.x += mark.dx; mark.y += mark.dy;
-                    const elWidth = mark.el.offsetWidth; const elHeight = mark.el.offsetHeight;
-                    if (mark.x + elWidth >= width || mark.x <= 0) mark.dx = -mark.dx;
-                    if (mark.y + elHeight >= height || mark.y <= 0) mark.dy = -mark.dy;
-                    if(mark.x < 0) mark.x = 0; if(mark.y < 0) mark.y = 0;
-                    if(mark.x + elWidth > width) mark.x = width - elWidth; if(mark.y + elHeight > height) mark.y = height - elHeight;
-                    mark.el.style.transform = `translate(${mark.x}px, ${mark.y}px)`;
-                });
-                requestAnimationFrame(animate); 
-            }
-            animate(); 
-        }
-    </script>
-</body>
-</html>
+                    cMapUrl: 'https://cdnjs.cloudflare.
