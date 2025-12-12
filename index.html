@@ -137,7 +137,7 @@
         /* =========================================
            ★ 사용자 설정 구역 (여기만 고치세요) ★
            ========================================= */
-        const pdfUrl = './sample.pdf';  // PDF 파일명 (대소문자 정확히)
+        const pdfUrl = './hhyperfastt.pdf';  // PDF 파일명 (대소문자 정확히)
         const validCodes = ['1210', '931122', '870625', 'admin0625']; // 입장 가능한 코드 목록
         const watermarkCount = 3; // 화면에 떠다닐 워터마크 개수 (너무 많으면 정신없음)
 
@@ -181,7 +181,7 @@
                 initBouncingWatermarks(secureText); 
 
             } else {
-                alert("등록되지 않은 보안 코드입니다.");
+                alert("잘못 입력하셨습니다.");
             }
         }
 
@@ -228,8 +228,8 @@
                     el: el,
                     x: Math.random() * (window.innerWidth - 200),
                     y: Math.random() * (window.innerHeight - 50),
-                    dx: (Math.random() - 0.5) * 10, // 가로 속도 (조절 가능)
-                    dy: (Math.random() - 0.5) * 10  // 세로 속도 (조절 가능)
+                    dx: (Math.random() - 0.5) * 50, // 가로 속도 (조절 가능)
+                    dy: (Math.random() - 0.5) * 50  // 세로 속도 (조절 가능)
                 });
             }
 
