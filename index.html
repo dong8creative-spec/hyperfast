@@ -3,119 +3,156 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>보안 문서 뷰어</title>
+    <title>보안 강의자료실</title>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/2.16.105/pdf.min.js"></script>
 
     <style>
         /* 1. 기본 설정 */
-        body { margin: 0; background-color: #525659; overflow-x: hidden; user-select: none; }
-        
-        /* 2. 로그인(식별코드 입력) 화면 */
+        body { margin: 0; background-color: #525659; overflow-x: hidden; user-select: none; font-family: 'pretendard', 'Noto Sans KR', sans-serif;}
+        * { box-sizing: border-box; }
+
+        /* 2. 로그인 화면 (2단 레이아웃 적용) */
         #login-overlay {
             position: fixed; top: 0; left: 0; width: 100%; height: 100%;
-            background: white; z-index: 9999;
-            display: flex; flex-direction: column; justify-content: center; align-items: center;
+            background: #fff; z-index: 9999;
+            display: flex; /* 가로 배치 시작 */
         }
-        input { padding: 15px; font-size: 18px; border: 2px solid #ddd; border-radius: 5px; width: 250px; text-align: center; }
-        button { margin-top: 10px; padding: 15px 30px; font-size: 18px; background: #333; color: white; border: none; border-radius: 5px; cursor: pointer; }
 
-        /* 3. PDF가 보여질 영역 */
+        /* 왼쪽: 대표 이미지 영역 */
+        .login-left-image {
+            flex: 1; /* 공간 50% 차지 */
+            background-color: #f0f0f0;
+            display: flex; justify-content: center; align-items: center;
+            overflow: hidden;
+        }
+        .login-left-image img {
+            width: 100%; height: 100%;
+            object-fit: cover; /* 1:1 비율 유지하며 꽉 채우기 */
+        }
+
+        /* 오른쪽: 입력 폼 영역 */
+        .login-right-form {
+            flex: 1; /* 공간 50% 차지 */
+            display: flex; flex-direction: column; justify-content: center; align-items: center;
+            padding: 40px; background: white;
+        }
+
+        /* 입력 폼 스타일링 */
+        .form-container { width: 100%; max-width: 400px; text-align: center; }
+        h2 { font-size: 32px; margin-bottom: 10px; color: #333; }
+        p.desc { color: #666; margin-bottom: 40px; line-height: 1.5; }
+        
+        input { 
+            padding: 15px; font-size: 18px; border: 2px solid #ddd; border-radius: 8px; 
+            width: 100%; text-align: center; margin-bottom: 15px; transition: all 0.3s;
+        }
+        input:focus { border-color: #333; outline: none; }
+        
+        button { 
+            padding: 15px; font-size: 18px; background: #222; color: white; 
+            border: none; border-radius: 8px; cursor: pointer; width: 100%; font-weight: bold;
+            transition: background 0.3s;
+        }
+        button:hover { background: #555; }
+
+
+        /* 3. PDF가 보여질 영역 (기존 동일) */
         #pdf-container {
             display: flex; flex-direction: column; align-items: center; padding: 20px 0;
-            display: none; /* 암호 입력 전에는 숨김 */
+            display: none; /* 암호 입력 전 숨김 */
         }
         canvas {
-            margin-bottom: 20px; box-shadow: 0 0 15px rgba(0,0,0,0.5);
+            margin-bottom: 20px; box-shadow: 0 5px 25px rgba(0,0,0,0.5);
             max-width: 100%; height: auto;
         }
 
-        /* 4. 둥둥 떠다니는 워터마크 (애니메이션) */
+        /* 4. 움직이는 워터마크 (기존 동일) */
         #watermark-layer {
             position: fixed; top: -50%; left: -50%; width: 200%; height: 200%;
-            pointer-events: none; /* 클릭 통과 (필수) */
-            z-index: 999;
+            pointer-events: none; z-index: 999;
             display: flex; flex-wrap: wrap; justify-content: space-around; align-content: space-around;
-            transform: rotate(-30deg); /* 대각선 기울기 */
-            animation: floatMove 60s linear infinite; /* 60초 동안 천천히 움직임 */
-            opacity: 0.15; /* 투명도 조절 */
-            display: none; /* 암호 입력 전 숨김 */
+            transform: rotate(-30deg);
+            animation: floatMove 60s linear infinite;
+            opacity: 0.15; display: none;
         }
-
         .watermark-text {
             width: 300px; height: 150px;
             font-size: 24px; font-weight: bold; color: #000;
             display: flex; align-items: center; justify-content: center;
         }
-
-        /* 워터마크가 천천히 움직이는 동작 정의 */
         @keyframes floatMove {
             0% { transform: rotate(-30deg) translate(0, 0); }
             50% { transform: rotate(-30deg) translate(-50px, -50px); }
             100% { transform: rotate(-30deg) translate(0, 0); }
+        }
+
+        /* 모바일 반응형 (화면 좁을 때 위아래 배치) */
+        @media (max-width: 900px) {
+            #login-overlay { flex-direction: column; }
+            .login-left-image { height: 40vh; flex: none; } /* 상단 40% 높이 */
+            .login-right-form { height: 60vh; flex: none; padding: 20px; }
+            h2 { font-size: 24px; }
         }
     </style>
 </head>
 <body oncontextmenu="return false" ondragstart="return false">
 
     <div id="login-overlay">
-        <h2>보안 문서 열람</h2>
-        <p>발급받은 접속 코드를 입력하세요.</p>
-        <input type="text" id="access-code" placeholder="코드를 입력하세요">
-        <button onclick="startViewer()">문서 열기</button>
+        <div class="login-left-image">
+            <img src="https://via.placeholder.com/1000x1000.png?text=LECTURE+COVER+IMAGE" alt="강의 대표 이미지">
+        </div>
+
+        <div class="login-right-form">
+            <div class="form-container">
+                <h2>보안 자료 열람</h2>
+                <p class="desc">발급받으신 보안 코드를 입력해주십시오.<br>접속 기록 및 IP가 워터마크로 기록됩니다.</p>
+                <input type="text" id="access-code" placeholder="보안 코드 입력">
+                <button onclick="startViewer()">입장하기</button>
+            </div>
+        </div>
     </div>
 
     <div id="pdf-container"></div>
-
     <div id="watermark-layer"></div>
 
     <script>
-        // ★★★ 설정 부분: 여기에 PDF 파일명을 적으세요 ★★★
-        const url = './sample.pdf'; // 같은 폴더에 있는 파일명 (예: lecture_01.pdf)
+        // ★★★ 설정: PDF 파일명 수정하세요 ★★★
+        const url = './sample.pdf'; 
 
-        // PDF.js 설정
         pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/2.16.105/pdf.worker.min.js';
 
-        // 1. 뷰어 시작 함수 (버튼 클릭 시 실행)
         function startViewer() {
             const code = document.getElementById('access-code').value;
             if(code.trim().length > 0) {
-                document.getElementById('login-overlay').style.display = 'none'; // 로그인창 끔
-                document.getElementById('pdf-container').style.display = 'flex'; // PDF창 켬
-                document.getElementById('watermark-layer').style.display = 'flex'; // 워터마크 켬
+                document.getElementById('login-overlay').style.display = 'none';
+                document.getElementById('pdf-container').style.display = 'flex';
+                document.getElementById('watermark-layer').style.display = 'flex';
                 
-                // 워터마크 생성 실행
                 createWatermark(code); 
-                // PDF 렌더링 실행
                 renderPDF();
             } else {
-                alert("코드를 입력해주세요.");
+                alert("보안 코드를 입력해주세요.");
             }
         }
 
-        // 2. PDF를 읽어서 화면에 뿌려주는 함수
         async function renderPDF() {
             try {
                 const pdf = await pdfjsLib.getDocument(url).promise;
                 const container = document.getElementById('pdf-container');
 
-                // 페이지 수만큼 반복
                 for (let pageNum = 1; pageNum <= pdf.numPages; pageNum++) {
                     const page = await pdf.getPage(pageNum);
-                    
-                    // 모바일/PC 화면 크기에 맞춰 배율 조정 (기본 1.5배 선명하게)
-                    const scale = 1.5;
+                    // PC에서 너무 크면 이 scale 값을 1.5에서 1.2 정도로 줄이세요
+                    const scale = 1.5; 
                     const viewport = page.getViewport({ scale: scale });
 
-                    // 캔버스(그림판) 생성
                     const canvas = document.createElement('canvas');
                     const context = canvas.getContext('2d');
                     canvas.height = viewport.height;
                     canvas.width = viewport.width;
 
-                    // 캔버스를 화면에 추가
                     container.appendChild(canvas);
 
-                    // PDF 페이지를 캔버스에 그리기
                     await page.render({
                         canvasContext: context,
                         viewport: viewport
@@ -123,18 +160,16 @@
                 }
             } catch (error) {
                 console.error(error);
-                alert("PDF 파일을 찾을 수 없습니다. 파일명을 확인해주세요.\n(서버에 업로드해야 작동합니다)");
+                alert("PDF 파일을 찾을 수 없습니다. (서버 업로드 확인 필요)");
             }
         }
 
-        // 3. 움직이는 워터마크 만드는 함수
         function createWatermark(text) {
             const layer = document.getElementById('watermark-layer');
-            // 화면을 뒤덮을 만큼 많이 생성 (약 60개)
             for(let i=0; i<60; i++) {
                 const div = document.createElement('div');
                 div.className = 'watermark-text';
-                div.innerText = text + " (유출금지)";
+                div.innerText = text; // 입력한 코드만 깔끔하게 표시
                 layer.appendChild(div);
             }
         }
