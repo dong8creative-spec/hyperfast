@@ -20,7 +20,7 @@
             overflow-y: auto; 
         }
 
-        /* 왼쪽: 이미지 영역 */
+        /* 왼쪽: 이미지 영역 (1:1 비율 고정) */
         .login-left-image {
             width: 50%; 
             aspect-ratio: 1 / 1; 
@@ -59,20 +59,20 @@
         button:hover { background: #555; }
 
         /* =========================================
-           [NEW] 커스텀 경고 팝업 (Modal) 스타일
+           [팝업] 커스텀 경고 팝업 (Modal) 스타일
            ========================================= */
         #error-modal {
             display: none; /* 평소엔 숨김 */
             position: fixed; top: 0; left: 0; width: 100%; height: 100%;
-            background: rgba(0,0,0,0.6); /* 검은색 반투명 배경 */
-            z-index: 9999; /* 제일 위에 뜨게 */
+            background: rgba(0,0,0,0.6); 
+            z-index: 9999; 
             justify-content: center; align-items: center;
         }
         .modal-content {
             background: white; padding: 30px; border-radius: 12px;
             width: 90%; max-width: 350px; text-align: center;
             box-shadow: 0 10px 30px rgba(0,0,0,0.3);
-            animation: shake 0.4s ease-in-out; /* 덜덜 떨리는 효과 */
+            animation: shake 0.4s ease-in-out; 
         }
         .modal-title { color: #e74c3c; font-size: 20px; font-weight: 900; margin-bottom: 10px; }
         .modal-desc { color: #555; font-size: 15px; margin-bottom: 25px; line-height: 1.5; }
@@ -82,7 +82,6 @@
         }
         .modal-btn:hover { background: #c0392b; }
 
-        /* 팝업 덜덜 떨리는 애니메이션 */
         @keyframes shake {
             0% { transform: translateX(0); }
             25% { transform: translateX(-5px); }
@@ -117,7 +116,7 @@
             text-shadow: 1px 1px 2px rgba(255, 255, 255, 0.5);
         }
 
-        /* 4. 모바일 반응형 */
+        /* 모바일 반응형 */
         @media (max-width: 900px) {
             #login-overlay { flex-direction: column; position: absolute; height: auto; min-height: 100vh; }
             .login-left-image { width: 100%; aspect-ratio: 1 / 1; max-height: none; }
@@ -170,7 +169,7 @@
         /* 시스템 로직 */
         let clientIP = "IP 추적 불가";
 
-        // IP 가져오기
+        // IP 추적
         fetch('https://api.ipify.org?format=json')
             .then(response => response.json())
             .then(data => {
@@ -184,20 +183,29 @@
 
         pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/2.16.105/pdf.worker.min.js';
 
-        /* [NEW] 엔터키 입력 감지 기능 */
-        document.getElementById('access-code').addEventListener("keypress", function(event) {
+        /* [핵심] 키보드 엔터키 통합 제어 */
+        document.addEventListener('keydown', function(event) {
             if (event.key === "Enter") {
-                event.preventDefault(); // 기본 동작 방지
-                startViewer(); // 입장 함수 실행
+                const modal = document.getElementById('error-modal');
+                
+                // 1. 만약 경고 팝업이 떠 있다면 -> 엔터키로 닫기
+                if (modal.style.display === 'flex') {
+                    closePopup();
+                    return;
+                }
+
+                // 2. 만약 입력창에 포커스가 있다면 -> 엔터키로 로그인 시도
+                if (document.activeElement === document.getElementById('access-code')) {
+                    startViewer();
+                }
             }
         });
 
-        // 입장 시작 함수
         function startViewer() {
             const inputCode = document.getElementById('access-code').value.trim();
             
             if(validCodes.includes(inputCode)) {
-                // 성공 시
+                // 로그인 성공
                 document.getElementById('login-overlay').style.display = 'none';
                 document.getElementById('pdf-container').style.display = 'flex';
                 document.getElementById('watermark-layer').style.display = 'block'; 
@@ -207,25 +215,32 @@
                 initBouncingWatermarks(secureText); 
 
             } else {
-                // [NEW] 실패 시 경고 팝업 띄우기 (alert 대신 사용)
+                // 로그인 실패 (팝업 열기)
                 openPopup();
             }
         }
 
-        /* [NEW] 팝업 열기/닫기 함수 */
+        // 팝업 제어 함수
         function openPopup() {
             document.getElementById('error-modal').style.display = 'flex';
         }
         function closePopup() {
             document.getElementById('error-modal').style.display = 'none';
-            document.getElementById('access-code').value = ''; // 입력창 초기화
-            document.getElementById('access-code').focus(); // 다시 입력하도록 포커스
+            document.getElementById('access-code').value = ''; 
+            document.getElementById('access-code').focus(); // 다시 입력하도록 포커스 이동
         }
 
-        // PDF 렌더링
+        /* [핵심] PDF 렌더링 (한글 깨짐 방지 CMaps 적용) */
         async function renderPDF() {
             try {
-                const pdf = await pdfjsLib.getDocument(pdfUrl).promise;
+                // CMaps 설정 추가
+                const loadingTask = pdfjsLib.getDocument({
+                    url: pdfUrl,
+                    cMapUrl: 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/2.16.105/cmaps/',
+                    cMapPacked: true,
+                });
+
+                const pdf = await loadingTask.promise;
                 const container = document.getElementById('pdf-container');
 
                 for (let pageNum = 1; pageNum <= pdf.numPages; pageNum++) {
@@ -242,11 +257,12 @@
                     await page.render({ canvasContext: context, viewport: viewport }).promise;
                 }
             } catch (error) {
-                alert("PDF 파일 로딩 오류 (파일명 확인 필요)");
+                console.error(error);
+                alert("PDF 로딩 실패. 서버에 업로드 되었는지 확인하세요.");
             }
         }
 
-        // DVD 밈 워터마크 (Bouncing)
+        // 워터마크 애니메이션
         function initBouncingWatermarks(text) {
             const container = document.getElementById('watermark-layer');
             const marks = [];
@@ -261,8 +277,8 @@
                     el: el,
                     x: Math.random() * (window.innerWidth - 200),
                     y: Math.random() * (window.innerHeight - 50),
-                    dx: (Math.random() - 0.5) * 1, 
-                    dy: (Math.random() - 0.5) * 1  
+                    dx: (Math.random() - 0.5) * 0.2, 
+                    dy: (Math.random() - 0.5) * 0.2  
                 });
             }
 
