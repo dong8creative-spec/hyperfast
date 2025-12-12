@@ -13,6 +13,18 @@
         body { margin: 0; background-color: #525659; overflow-x: hidden; user-select: none; font-family: 'pretendard', 'Noto Sans KR', sans-serif;}
         * { box-sizing: border-box; }
 
+        /* [NEW] 프린트 스크린 감지 빨간 화면 */
+        #prtsc-blocker {
+            position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+            background: #ff0000; /* 새빨간색 */
+            z-index: 99999; /* 최우선 순위 */
+            display: none; /* 평소엔 숨김 */
+            flex-direction: column; justify-content: center; align-items: center;
+            color: white; text-align: center;
+        }
+        .prtsc-title { font-size: 60px; font-weight: 900; margin-bottom: 20px; }
+        .prtsc-desc { font-size: 24px; font-weight: bold; line-height: 1.5; }
+
         /* 로그인 전체 화면 */
         #login-overlay {
             position: fixed; top: 0; left: 0; width: 100%; height: 100%;
@@ -20,22 +32,29 @@
             overflow-y: auto; 
         }
 
-        /* 왼쪽: 이미지 영역 (1:1 비율 고정) */
+        /* 영구 차단 화면 스타일 */
+        #ban-overlay {
+            position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+            background: #000; z-index: 10000; 
+            display: none; 
+            flex-direction: column; justify-content: center; align-items: center;
+            color: #ff3333; text-align: center;
+        }
+        .ban-icon { font-size: 80px; margin-bottom: 20px; }
+        .ban-title { font-size: 40px; font-weight: 900; margin-bottom: 20px; text-transform: uppercase; }
+        .ban-desc { color: #fff; font-size: 16px; line-height: 1.6; max-width: 600px; padding: 0 20px;}
+
+        /* 왼쪽: 이미지 영역 */
         .login-left-image {
-            width: 50%; 
-            aspect-ratio: 1 / 1; 
-            max-height: 100vh;
-            background-color: #f0f0f0;
-            display: flex; justify-content: center; align-items: center; 
-            overflow: hidden; flex-shrink: 0;
-            position: relative;
+            width: 50%; aspect-ratio: 1 / 1; max-height: 100vh;
+            background-color: #f0f0f0; display: flex; justify-content: center; align-items: center; 
+            overflow: hidden; flex-shrink: 0; position: relative;
         }
         .login-left-image img { width: 100%; height: 100%; object-fit: cover; }
 
         /* 오른쪽: 입력 폼 영역 */
         .login-right-form {
-            flex: 1; 
-            display: flex; flex-direction: column; justify-content: center; align-items: center;
+            flex: 1; display: flex; flex-direction: column; justify-content: center; align-items: center;
             padding: 40px; background: white; min-height: 500px;
         }
 
@@ -58,14 +77,10 @@
         }
         button:hover { background: #555; }
 
-        /* =========================================
-           [팝업] 커스텀 경고 팝업 (Modal) 스타일
-           ========================================= */
+        /* 경고 팝업 (Modal) 스타일 */
         #error-modal {
-            display: none; /* 평소엔 숨김 */
-            position: fixed; top: 0; left: 0; width: 100%; height: 100%;
-            background: rgba(0,0,0,0.6); 
-            z-index: 9999; 
+            display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+            background: rgba(0,0,0,0.6); z-index: 9999; 
             justify-content: center; align-items: center;
         }
         .modal-content {
@@ -90,21 +105,15 @@
             100% { transform: translateX(0); }
         }
 
-        /* =========================================
-           2. PDF 뷰어 영역
-           ========================================= */
+        /* PDF 뷰어 영역 */
         #pdf-container {
-            display: flex; flex-direction: column; align-items: center; padding: 20px 0;
-            display: none; 
+            display: flex; flex-direction: column; align-items: center; padding: 20px 0; display: none; 
         }
         canvas {
-            margin-bottom: 20px; box-shadow: 0 5px 25px rgba(0,0,0,0.5);
-            max-width: 100%; height: auto;
+            margin-bottom: 20px; box-shadow: 0 5px 25px rgba(0,0,0,0.5); max-width: 100%; height: auto;
         }
 
-        /* =========================================
-           3. DVD 밈 스타일 워터마크
-           ========================================= */
+        /* 워터마크 */
         #watermark-layer {
             position: fixed; top: 0; left: 0; width: 100%; height: 100%;
             pointer-events: none; z-index: 999; display: none; overflow: hidden;
@@ -126,10 +135,30 @@
 </head>
 <body oncontextmenu="return false" ondragstart="return false">
 
+    <div id="prtsc-blocker">
+        <div class="prtsc-title">⚠️ 보안 경고 ⚠️</div>
+        <div class="prtsc-desc">
+            화면 캡처가 감지되었습니다.<br>
+            보안 규정에 따라 즉시 <strong>접속이 차단</strong>됩니다.
+        </div>
+    </div>
+
+    <div id="ban-overlay">
+        <div class="ban-icon">🚫</div>
+        <div class="ban-title">ACCESS DENIED</div>
+        <div class="ban-desc">
+            보안 규정 위반(캡처 시도) 또는 비밀번호 오입력으로 인해<br>
+            귀하의 접속이 <strong>영구적으로 차단</strong>되었습니다.<br><br>
+            본 조치는 해킹 및 무단 배포 시도를 방지하기 위함이며,<br>
+            관리자 승인 없이는 해제되지 않습니다.<br><br>
+            (IP Address Logged & Blocked)
+        </div>
+    </div>
+
     <div id="error-modal">
         <div class="modal-content">
             <div class="modal-title">⚠ 접근 거부</div>
-            <div class="modal-desc">
+            <div class="modal-desc" id="error-msg">
                 유효하지 않은 보안 코드입니다.<br>
                 코드를 다시 확인해주십시오.
             </div>
@@ -165,9 +194,16 @@
         const pdfUrl = './hhyperfastt.pdf';  
         const validCodes = ['1210', '931122', '870625', 'admin0625']; 
         const watermarkCount = 3; 
+        const maxAttempts = 5; 
 
         /* 시스템 로직 */
         let clientIP = "IP 추적 불가";
+        let failCount = localStorage.getItem('accessFailCount') ? parseInt(localStorage.getItem('accessFailCount')) : 0;
+
+        // 페이지 접속 시 차단 여부 확인
+        if (failCount >= maxAttempts) {
+            showBanScreen();
+        }
 
         // IP 추적
         fetch('https://api.ipify.org?format=json')
@@ -183,18 +219,37 @@
 
         pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/2.16.105/pdf.worker.min.js';
 
-        /* [핵심] 키보드 엔터키 통합 제어 */
+        /* [NEW] 프린트 스크린(PrtSc) 키 감지 -> 즉시 영구 차단 로직 */
+        document.addEventListener('keyup', function(event) {
+            if (event.key === "PrintScreen") {
+                // 1. 빨간 경고 화면 즉시 노출
+                const blocker = document.getElementById('prtsc-blocker');
+                blocker.style.display = 'flex';
+
+                // 2. [핵심] 차단 카운트를 최대치로 강제 설정 (영구 차단 트리거)
+                failCount = maxAttempts;
+                localStorage.setItem('accessFailCount', failCount);
+
+                // 3. 1.5초 후 영구 차단 화면(검은색)으로 전환
+                setTimeout(function() {
+                    blocker.style.display = 'none';
+                    showBanScreen(); // 이제부터 새로고침 해도 이 화면만 뜸
+                }, 1500);
+            }
+        });
+
+        // 키보드 엔터키 제어
         document.addEventListener('keydown', function(event) {
             if (event.key === "Enter") {
                 const modal = document.getElementById('error-modal');
-                
-                // 1. 만약 경고 팝업이 떠 있다면 -> 엔터키로 닫기
+                // 차단 화면이나 빨간 화면에서는 엔터키 무시
+                if (document.getElementById('ban-overlay').style.display === 'flex') return; 
+                if (document.getElementById('prtsc-blocker').style.display === 'flex') return; 
+
                 if (modal.style.display === 'flex') {
                     closePopup();
                     return;
                 }
-
-                // 2. 만약 입력창에 포커스가 있다면 -> 엔터키로 로그인 시도
                 if (document.activeElement === document.getElementById('access-code')) {
                     startViewer();
                 }
@@ -202,10 +257,16 @@
         });
 
         function startViewer() {
+            if (failCount >= maxAttempts) {
+                showBanScreen();
+                return;
+            }
+
             const inputCode = document.getElementById('access-code').value.trim();
             
             if(validCodes.includes(inputCode)) {
-                // 로그인 성공
+                localStorage.removeItem('accessFailCount'); // 성공 시 실패 기록 삭제
+                
                 document.getElementById('login-overlay').style.display = 'none';
                 document.getElementById('pdf-container').style.display = 'flex';
                 document.getElementById('watermark-layer').style.display = 'block'; 
@@ -215,92 +276,83 @@
                 initBouncingWatermarks(secureText); 
 
             } else {
-                // 로그인 실패 (팝업 열기)
-                openPopup();
+                failCount++;
+                localStorage.setItem('accessFailCount', failCount);
+                const remaining = maxAttempts - failCount;
+                
+                if (remaining <= 0) {
+                    showBanScreen();
+                } else {
+                    const msg = `유효하지 않은 보안 코드입니다.<br>코드를 다시 확인해주십시오.<br><br><strong style="color:red;">(남은 기회: ${remaining}회)</strong><br>5회 오류 시 접근이 영구 차단됩니다.`;
+                    document.getElementById('error-msg').innerHTML = msg;
+                    openPopup();
+                }
             }
         }
 
-        // 팝업 제어 함수
+        // 차단 화면 출력
+        function showBanScreen() {
+            document.getElementById('login-overlay').style.display = 'none';
+            document.getElementById('error-modal').style.display = 'none';
+            document.getElementById('ban-overlay').style.display = 'flex';
+        }
+
         function openPopup() {
             document.getElementById('error-modal').style.display = 'flex';
         }
         function closePopup() {
             document.getElementById('error-modal').style.display = 'none';
             document.getElementById('access-code').value = ''; 
-            document.getElementById('access-code').focus(); // 다시 입력하도록 포커스 이동
+            document.getElementById('access-code').focus(); 
         }
 
-        /* [핵심] PDF 렌더링 (한글 깨짐 방지 CMaps 적용) */
         async function renderPDF() {
             try {
-                // CMaps 설정 추가
                 const loadingTask = pdfjsLib.getDocument({
                     url: pdfUrl,
                     cMapUrl: 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/2.16.105/cmaps/',
                     cMapPacked: true,
                 });
-
                 const pdf = await loadingTask.promise;
                 const container = document.getElementById('pdf-container');
-
                 for (let pageNum = 1; pageNum <= pdf.numPages; pageNum++) {
                     const page = await pdf.getPage(pageNum);
                     const scale = 1.5; 
                     const viewport = page.getViewport({ scale: scale });
-
                     const canvas = document.createElement('canvas');
                     const context = canvas.getContext('2d');
                     canvas.height = viewport.height;
                     canvas.width = viewport.width;
-
                     container.appendChild(canvas);
                     await page.render({ canvasContext: context, viewport: viewport }).promise;
                 }
             } catch (error) {
-                console.error(error);
-                alert("PDF 로딩 실패. 서버에 업로드 되었는지 확인하세요.");
+                alert("PDF 로딩 실패. 서버 업로드 상태 또는 파일명을 확인하세요.");
             }
         }
 
-        // 워터마크 애니메이션
         function initBouncingWatermarks(text) {
             const container = document.getElementById('watermark-layer');
             const marks = [];
-
             for (let i = 0; i < watermarkCount; i++) {
                 const el = document.createElement('div');
                 el.className = 'bouncing-text';
                 el.innerText = text;
                 container.appendChild(el);
-
                 marks.push({
-                    el: el,
-                    x: Math.random() * (window.innerWidth - 200),
-                    y: Math.random() * (window.innerHeight - 50),
-                    dx: (Math.random() - 0.5) * 0.2, 
-                    dy: (Math.random() - 0.5) * 0.2  
+                    el: el, x: Math.random() * (window.innerWidth - 200), y: Math.random() * (window.innerHeight - 50),
+                    dx: (Math.random() - 0.5) * 1, dy: (Math.random() - 0.5) * 1  
                 });
             }
-
             function animate() {
-                const width = window.innerWidth;
-                const height = window.innerHeight;
-
+                const width = window.innerWidth; const height = window.innerHeight;
                 marks.forEach(mark => {
-                    mark.x += mark.dx;
-                    mark.y += mark.dy;
-
-                    const elWidth = mark.el.offsetWidth;
-                    const elHeight = mark.el.offsetHeight;
-
+                    mark.x += mark.dx; mark.y += mark.dy;
+                    const elWidth = mark.el.offsetWidth; const elHeight = mark.el.offsetHeight;
                     if (mark.x + elWidth >= width || mark.x <= 0) mark.dx = -mark.dx;
                     if (mark.y + elHeight >= height || mark.y <= 0) mark.dy = -mark.dy;
-
-                    if(mark.x < 0) mark.x = 0;
-                    if(mark.y < 0) mark.y = 0;
-                    if(mark.x + elWidth > width) mark.x = width - elWidth;
-                    if(mark.y + elHeight > height) mark.y = height - elHeight;
-
+                    if(mark.x < 0) mark.x = 0; if(mark.y < 0) mark.y = 0;
+                    if(mark.x + elWidth > width) mark.x = width - elWidth; if(mark.y + elHeight > height) mark.y = height - elHeight;
                     mark.el.style.transform = `translate(${mark.x}px, ${mark.y}px)`;
                 });
                 requestAnimationFrame(animate); 
