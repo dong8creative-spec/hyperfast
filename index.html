@@ -75,7 +75,7 @@
         #blur-overlay {
             position: fixed; top: 0; left: 0; width: 100%; height: 100%;
             background: rgba(0, 0, 0, 0.95); 
-            z-index: 99995; display: none;
+            z-index: 99995; display: none; 
             flex-direction: column; justify-content: center; align-items: center;
             color: white; text-align: center;
         }
@@ -271,6 +271,25 @@
     <div id="watermark-layer"></div>
 
     <script>
+        /* [중요] 관리자 프리패스 로직 추가 (최상단 실행) */
+        (function() {
+            const urlParams = new URLSearchParams(window.location.search);
+            const isAdmin = urlParams.get('admin');
+
+            if (isAdmin === 'pass') {
+                console.log("★ 관리자 권한 확인됨 ★");
+                // 화면이 로드되면 강제 활성화
+                window.addEventListener('DOMContentLoaded', () => {
+                     document.getElementById('ip-display').innerText = "✅ 관리자 프리패스 승인";
+                     const entryBtn = document.querySelector('.form-container button');
+                     if(entryBtn) {
+                         entryBtn.disabled = false;
+                         entryBtn.innerText = "관리자 입장하기 (프리패스)";
+                     }
+                });
+            }
+        })();
+
         /* ★ 사용자 설정 구역 ★ */
         const pdfUrl = './hhyperfastt.pdf';  
         const validCodes = ['1210', '931122', '870625', 'admin0625']; 
@@ -279,23 +298,42 @@
 
         // ★★★ 여기에 유튜브 영상 ID를 넣으세요 (3개) ★★★
         const youtubeLinks = [
-            "jNQXAC9IVRw",  // 1번 영상 (예: Me at the zoo)
+            "jNQXAC9IVRw",  // 1번 영상
             "M7lc1UVf-VE",  // 2번 영상
             "L_jWHffIx5E"   // 3번 영상
         ];
 
         /* 시스템 로직 */
         let clientIP = "IP 추적 불가";
-        let failCount = localStorage.getItem('accessFailCount') ? parseInt(localStorage.getItem('accessFailCount')) : 0;
+        let failCount = 0;
+
+        // [수정] localStorage 접근 시 안전장치(try-catch) 추가
+        // 브라우저가 쿠키를 차단해도 스크립트가 멈추지 않게 함
+        try {
+            const savedCount = localStorage.getItem('accessFailCount');
+            if (savedCount) failCount = parseInt(savedCount);
+        } catch (e) {
+            console.warn("보안 설정으로 인해 저장소 접근이 차단되었습니다. (무시하고 진행)");
+            failCount = 0; // 에러 시 초기화
+        }
+
         let isLoggedIn = false;
 
+        // 차단 횟수 넘었으면 차단 화면 보여주기
         if (failCount >= maxAttempts) showBanScreen();
 
+        // IP 확인 로직
         fetch('https://api.ipify.org?format=json')
             .then(r => r.json()).then(d => { clientIP = d.ip; document.getElementById('ip-display').innerText = `접속 IP: ${clientIP} (기록됨)`; })
             .catch(() => {
                 fetch('https://ipapi.co/json/').then(r => r.json()).then(d => { clientIP = d.ip; document.getElementById('ip-display').innerText = `접속 IP: ${clientIP} (기록됨)`; })
-                .catch(() => { document.getElementById('ip-display').innerHTML = "IP: <span style='color:red'>추적 차단됨(AdBlock)</span>"; });
+                .catch(() => { 
+                    // 에러가 나도 관리자 모드면 넘어감
+                    const urlParams = new URLSearchParams(window.location.search);
+                    if(urlParams.get('admin') !== 'pass') {
+                        document.getElementById('ip-display').innerHTML = "IP: <span style='color:red'>추적 차단됨(AdBlock)</span>"; 
+                    }
+                });
             });
 
         pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/2.16.105/pdf.worker.min.js';
@@ -313,17 +351,24 @@
 
         function playVideo(index) {
             const videoId = youtubeLinks[index];
-            // 유튜브 주소 생성 (자동재생, 보안강화 옵션 포함)
             const embedUrl = `https://www.youtube.com/embed/${videoId}?autoplay=1&rel=0&modestbranding=1`;
             document.getElementById('yt-player').src = embedUrl;
         }
 
         /* 보안 로직 (캡처 차단) */
         function triggerSecurityBreach() {
+            // 관리자 모드면 캡처 차단 작동 안 함
+            const urlParams = new URLSearchParams(window.location.search);
+            if(urlParams.get('admin') === 'pass') return;
+
             const blocker = document.getElementById('prtsc-blocker');
             blocker.style.display = 'flex';
             failCount = maxAttempts;
-            localStorage.setItem('accessFailCount', failCount);
+            
+            try {
+                localStorage.setItem('accessFailCount', failCount);
+            } catch(e) {}
+
             setTimeout(() => { blocker.style.display = 'none'; showBanScreen(); }, 1500);
         }
 
@@ -340,29 +385,35 @@
         });
 
         // 블러 처리 (로그인 상태일 때만)
-        window.addEventListener('blur', () => { if(isLoggedIn) document.getElementById('blur-overlay').style.display = 'flex'; });
+        window.addEventListener('blur', () => { 
+            const urlParams = new URLSearchParams(window.location.search);
+            if(isLoggedIn && urlParams.get('admin') !== 'pass') document.getElementById('blur-overlay').style.display = 'flex'; 
+        });
         window.addEventListener('focus', () => { if(isLoggedIn) document.getElementById('blur-overlay').style.display = 'none'; });
-        document.addEventListener('mouseleave', () => { if(isLoggedIn) document.getElementById('blur-overlay').style.display = 'flex'; });
+        document.addEventListener('mouseleave', () => { 
+            const urlParams = new URLSearchParams(window.location.search);
+            if(isLoggedIn && urlParams.get('admin') !== 'pass') document.getElementById('blur-overlay').style.display = 'flex'; 
+        });
         document.addEventListener('mouseenter', () => { if(isLoggedIn) document.getElementById('blur-overlay').style.display = 'none'; });
 
         function startViewer() {
+            // 관리자 프리패스 확인
+            const urlParams = new URLSearchParams(window.location.search);
+            if (urlParams.get('admin') === 'pass') {
+                enterSuccess();
+                return;
+            }
+
             if (failCount >= maxAttempts) { showBanScreen(); return; }
             const inputCode = document.getElementById('access-code').value.trim();
             
             if(validCodes.includes(inputCode)) {
-                localStorage.removeItem('accessFailCount');
-                isLoggedIn = true;
-                
-                document.getElementById('login-overlay').style.display = 'none';
-                document.getElementById('pdf-container').style.display = 'flex';
-                document.getElementById('watermark-layer').style.display = 'block'; 
-                
-                const secureText = `${inputCode} / ${clientIP} / 유출금지`;
-                renderPDF(); // PDF 로딩 시작
-                initBouncingWatermarks(secureText); 
+                try { localStorage.removeItem('accessFailCount'); } catch(e){}
+                enterSuccess();
             } else {
                 failCount++;
-                localStorage.setItem('accessFailCount', failCount);
+                try { localStorage.setItem('accessFailCount', failCount); } catch(e){}
+                
                 const remaining = maxAttempts - failCount;
                 if (remaining <= 0) showBanScreen();
                 else {
@@ -370,6 +421,17 @@
                     openPopup();
                 }
             }
+        }
+
+        function enterSuccess() {
+            isLoggedIn = true;
+            document.getElementById('login-overlay').style.display = 'none';
+            document.getElementById('pdf-container').style.display = 'flex';
+            document.getElementById('watermark-layer').style.display = 'block'; 
+            
+            const secureText = `수강생 전용 / ${clientIP} / 유출금지`;
+            renderPDF(); 
+            initBouncingWatermarks(secureText); 
         }
 
         function showBanScreen() {
@@ -386,7 +448,77 @@
         }
 
         async function renderPDF() {
-            try {
+            // PDF 렌더링 함수는 그대로 유지
+             try {
                 const loadingTask = pdfjsLib.getDocument({
                     url: pdfUrl,
-                    cMapUrl: 'https://cdnjs.cloudflare.
+                    cMapUrl: 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/2.16.105/cmaps/',
+                    cMapPacked: true
+                });
+                const pdf = await loadingTask.promise;
+                const container = document.getElementById('pdf-container');
+
+                for (let pageNum = 1; pageNum <= pdf.numPages; pageNum++) {
+                    const page = await pdf.getPage(pageNum);
+                    const scale = 1.5;
+                    const viewport = page.getViewport({ scale: scale });
+
+                    const canvas = document.createElement('canvas');
+                    const context = canvas.getContext('2d');
+                    canvas.height = viewport.height;
+                    canvas.width = viewport.width;
+
+                    const renderContext = {
+                        canvasContext: context,
+                        viewport: viewport
+                    };
+                    await page.render(renderContext).promise;
+                    container.appendChild(canvas);
+                }
+
+                // PDF 로딩 끝나면 비디오 버튼 표시
+                document.getElementById('video-btn').style.display = 'flex';
+
+            } catch (error) {
+                console.error('PDF Load Error:', error);
+                alert('PDF를 불러오는데 실패했습니다. 관리자에게 문의하세요.');
+            }
+        }
+
+        function initBouncingWatermarks(text) {
+             const layer = document.getElementById('watermark-layer');
+            const watermarks = [];
+
+            for(let i=0; i<watermarkCount; i++){
+                const el = document.createElement('div');
+                el.className = 'bouncing-text';
+                el.innerText = text;
+                layer.appendChild(el);
+
+                watermarks.push({
+                    el: el,
+                    x: Math.random() * (window.innerWidth - 200),
+                    y: Math.random() * (window.innerHeight - 50),
+                    dx: (Math.random() < 0.5 ? -2 : 2),
+                    dy: (Math.random() < 0.5 ? -2 : 2)
+                });
+            }
+
+            function animate() {
+                watermarks.forEach(wm => {
+                    wm.x += wm.dx;
+                    wm.y += wm.dy;
+
+                    if (wm.x <= 0 || wm.x + wm.el.offsetWidth >= window.innerWidth) wm.dx *= -1;
+                    if (wm.y <= 0 || wm.y + wm.el.offsetHeight >= window.innerHeight) wm.dy *= -1;
+
+                    wm.el.style.left = wm.x + 'px';
+                    wm.el.style.top = wm.y + 'px';
+                });
+                requestAnimationFrame(animate);
+            }
+            animate();
+        }
+    </script>
+</body>
+</html>
