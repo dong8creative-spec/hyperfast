@@ -13,12 +13,11 @@
         body { margin: 0; background-color: #525659; overflow-x: hidden; user-select: none; font-family: 'pretendard', 'Noto Sans KR', sans-serif;}
         * { box-sizing: border-box; }
 
-        /* [NEW] 프린트 스크린 감지 빨간 화면 */
+        /* 캡처 감지 빨간 화면 */
         #prtsc-blocker {
             position: fixed; top: 0; left: 0; width: 100%; height: 100%;
-            background: #ff0000; /* 새빨간색 */
-            z-index: 99999; /* 최우선 순위 */
-            display: none; /* 평소엔 숨김 */
+            background: #ff0000; z-index: 99999; 
+            display: none; 
             flex-direction: column; justify-content: center; align-items: center;
             color: white; text-align: center;
         }
@@ -32,7 +31,7 @@
             overflow-y: auto; 
         }
 
-        /* 영구 차단 화면 스타일 */
+        /* 영구 차단 화면 */
         #ban-overlay {
             position: fixed; top: 0; left: 0; width: 100%; height: 100%;
             background: #000; z-index: 10000; 
@@ -149,8 +148,6 @@
         <div class="ban-desc">
             보안 규정 위반(캡처 시도) 또는 비밀번호 오입력으로 인해<br>
             귀하의 접속이 <strong>영구적으로 차단</strong>되었습니다.<br><br>
-            본 조치는 해킹 및 무단 배포 시도를 방지하기 위함이며,<br>
-            관리자 승인 없이는 해제되지 않습니다.<br><br>
             (IP Address Logged & Blocked)
         </div>
     </div>
@@ -200,7 +197,6 @@
         let clientIP = "IP 추적 불가";
         let failCount = localStorage.getItem('accessFailCount') ? parseInt(localStorage.getItem('accessFailCount')) : 0;
 
-        // 페이지 접속 시 차단 여부 확인
         if (failCount >= maxAttempts) {
             showBanScreen();
         }
@@ -219,30 +215,47 @@
 
         pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/2.16.105/pdf.worker.min.js';
 
-        /* [NEW] 프린트 스크린(PrtSc) 키 감지 -> 즉시 영구 차단 로직 */
-        document.addEventListener('keyup', function(event) {
-            if (event.key === "PrintScreen") {
-                // 1. 빨간 경고 화면 즉시 노출
-                const blocker = document.getElementById('prtsc-blocker');
-                blocker.style.display = 'flex';
+        /* [핵심] 캡처 감지 & 영구 차단 트리거 함수 
+           - Windows: PrintScreen 키
+           - Mac: Cmd(Meta) + Shift + 3 / 4 / 5
+        */
+        function triggerSecurityBreach() {
+            // 1. 빨간 화면 노출
+            const blocker = document.getElementById('prtsc-blocker');
+            blocker.style.display = 'flex';
 
-                // 2. [핵심] 차단 카운트를 최대치로 강제 설정 (영구 차단 트리거)
-                failCount = maxAttempts;
-                localStorage.setItem('accessFailCount', failCount);
+            // 2. 차단 카운트 최대치로 설정 (영구 차단)
+            failCount = maxAttempts;
+            localStorage.setItem('accessFailCount', failCount);
 
-                // 3. 1.5초 후 영구 차단 화면(검은색)으로 전환
-                setTimeout(function() {
-                    blocker.style.display = 'none';
-                    showBanScreen(); // 이제부터 새로고침 해도 이 화면만 뜸
-                }, 1500);
-            }
-        });
+            // 3. 1.5초 후 차단 화면 전환
+            setTimeout(function() {
+                blocker.style.display = 'none';
+                showBanScreen();
+            }, 1500);
+        }
 
-        // 키보드 엔터키 제어
+        /* 키보드 이벤트 리스너 통합 (캡처 & 엔터) */
         document.addEventListener('keydown', function(event) {
+            
+            // 1. Windows 캡처 감지 (PrintScreen)
+            if (event.key === "PrintScreen") {
+                triggerSecurityBreach();
+                return;
+            }
+
+            // 2. Mac 캡처 감지 (Cmd + Shift + 3, 4, 5)
+            if (event.metaKey && event.shiftKey) {
+                if (event.key === '3' || event.key === '4' || event.key === '5') {
+                    triggerSecurityBreach();
+                    event.preventDefault(); // 가능한 경우 브라우저 기본 동작 막기 시도
+                    return;
+                }
+            }
+
+            // 3. 엔터키 입장 기능
             if (event.key === "Enter") {
                 const modal = document.getElementById('error-modal');
-                // 차단 화면이나 빨간 화면에서는 엔터키 무시
                 if (document.getElementById('ban-overlay').style.display === 'flex') return; 
                 if (document.getElementById('prtsc-blocker').style.display === 'flex') return; 
 
@@ -256,6 +269,13 @@
             }
         });
 
+        /* (보조) keyup에서도 Windows PrintScreen 감지 (브라우저 호환성) */
+        document.addEventListener('keyup', function(event) {
+            if (event.key === "PrintScreen") {
+                triggerSecurityBreach();
+            }
+        });
+
         function startViewer() {
             if (failCount >= maxAttempts) {
                 showBanScreen();
@@ -265,7 +285,7 @@
             const inputCode = document.getElementById('access-code').value.trim();
             
             if(validCodes.includes(inputCode)) {
-                localStorage.removeItem('accessFailCount'); // 성공 시 실패 기록 삭제
+                localStorage.removeItem('accessFailCount');
                 
                 document.getElementById('login-overlay').style.display = 'none';
                 document.getElementById('pdf-container').style.display = 'flex';
@@ -290,7 +310,6 @@
             }
         }
 
-        // 차단 화면 출력
         function showBanScreen() {
             document.getElementById('login-overlay').style.display = 'none';
             document.getElementById('error-modal').style.display = 'none';
