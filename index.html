@@ -10,25 +10,33 @@
         /* =========================================
            1. 기본 및 레이아웃 설정
            ========================================= */
-        body { margin: 0; background-color: #525659; overflow-x: hidden; user-select: none; font-family: 'pretendard', 'Noto Sans KR', sans-serif;}
+        body { margin: 0; background-color: #222; overflow-x: hidden; user-select: none; font-family: 'pretendard', 'Noto Sans KR', sans-serif; cursor: none; /* 마우스 커서 숨김 (손전등 효과 극대화) */}
         * { box-sizing: border-box; }
 
-        /* [NEW] 화면 가림막 (포커스 잃었을 때) */
-        #blur-overlay {
+        /* [핵심] 손전등(Spotlight) 효과 */
+        /* 마우스 주변만 투명하고, 나머지는 검은색으로 덮어버림 */
+        #flashlight-layer {
             position: fixed; top: 0; left: 0; width: 100%; height: 100%;
-            background: rgba(0, 0, 0, 0.95); /* 거의 안 보이게 */
-            z-index: 99995; /* 팝업보단 아래, 내용보단 위 */
-            display: none;
-            flex-direction: column; justify-content: center; align-items: center;
-            color: white; text-align: center;
+            pointer-events: none; /* 클릭은 통과 */
+            z-index: 9999; /* 워터마크보다 위, 팝업보단 아래 */
+            background: radial-gradient(circle 150px at var(--x, 50%) var(--y, 50%), transparent 0%, rgba(0,0,0,0.98) 100%);
+            display: none; /* 로그인 전에는 숨김 */
         }
-        .blur-msg { font-size: 24px; font-weight: bold; margin-bottom: 20px; }
+
+        /* [NEW] 인쇄(Ctrl+P) 시도 시 강제로 내용 숨김 */
+        @media print {
+            body * { display: none !important; }
+            html::after {
+                content: "보안 문서입니다. 인쇄 및 PDF 저장이 불가능합니다.";
+                display: block; font-size: 30px; align-items: center; justify-content: center;
+                width: 100%; height: 100vh;
+            }
+        }
 
         /* 캡처 감지 빨간 화면 */
         #prtsc-blocker {
             position: fixed; top: 0; left: 0; width: 100%; height: 100%;
-            background: #ff0000; z-index: 99999; 
-            display: none; 
+            background: #ff0000; z-index: 99999; display: none; 
             flex-direction: column; justify-content: center; align-items: center;
             color: white; text-align: center;
         }
@@ -38,17 +46,16 @@
         /* 로그인 전체 화면 */
         #login-overlay {
             position: fixed; top: 0; left: 0; width: 100%; height: 100%;
-            background: #fff; z-index: 9990; display: flex;
+            background: #fff; z-index: 9990; display: flex; cursor: default; /* 로그인창에선 마우스 보임 */
             overflow-y: auto; 
         }
 
         /* 영구 차단 화면 */
         #ban-overlay {
             position: fixed; top: 0; left: 0; width: 100%; height: 100%;
-            background: #000; z-index: 10000; 
-            display: none; 
+            background: #000; z-index: 10000; display: none; 
             flex-direction: column; justify-content: center; align-items: center;
-            color: #ff3333; text-align: center;
+            color: #ff3333; text-align: center; cursor: default;
         }
         .ban-icon { font-size: 80px; margin-bottom: 20px; }
         .ban-title { font-size: 40px; font-weight: 900; margin-bottom: 20px; text-transform: uppercase; }
@@ -72,7 +79,6 @@
         .form-container { width: 100%; max-width: 400px; text-align: center; }
         h2 { font-size: 32px; margin-bottom: 10px; color: #333; font-weight: 800; }
         p.desc { color: #666; margin-bottom: 30px; line-height: 1.6; font-size: 15px; }
-        p.warning { color: #e74c3c; font-weight: bold; font-size: 13px; margin-bottom: 20px; }
         
         input { 
             padding: 15px; font-size: 18px; border: 2px solid #ddd; border-radius: 8px; 
@@ -87,11 +93,11 @@
         }
         button:hover { background: #555; }
 
-        /* 경고 팝업 (Modal) 스타일 */
+        /* 경고 팝업 (Modal) */
         #error-modal {
             display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%;
             background: rgba(0,0,0,0.6); z-index: 9999; 
-            justify-content: center; align-items: center;
+            justify-content: center; align-items: center; cursor: default;
         }
         .modal-content {
             background: white; padding: 30px; border-radius: 12px;
@@ -105,14 +111,8 @@
             background: #e74c3c; color: white; padding: 12px 0; width: 100%;
             border: none; border-radius: 6px; font-weight: bold; cursor: pointer; font-size: 16px;
         }
-        .modal-btn:hover { background: #c0392b; }
-
         @keyframes shake {
-            0% { transform: translateX(0); }
-            25% { transform: translateX(-5px); }
-            50% { transform: translateX(5px); }
-            75% { transform: translateX(-5px); }
-            100% { transform: translateX(0); }
+            0% { transform: translateX(0); } 25% { transform: translateX(-5px); } 50% { transform: translateX(5px); } 75% { transform: translateX(-5px); } 100% { transform: translateX(0); }
         }
 
         /* PDF 뷰어 영역 */
@@ -130,9 +130,8 @@
         }
         .bouncing-text {
             position: absolute;
-            font-size: 20px; font-weight: 900; color: rgba(0, 0, 0, 0.15);
+            font-size: 20px; font-weight: 900; color: rgba(255, 255, 255, 0.1); /* 흰색 연하게 (검은 배경이라) */
             white-space: nowrap; user-select: none;
-            text-shadow: 1px 1px 2px rgba(255, 255, 255, 0.5);
         }
 
         /* 모바일 반응형 */
@@ -140,17 +139,13 @@
             #login-overlay { flex-direction: column; position: absolute; height: auto; min-height: 100vh; }
             .login-left-image { width: 100%; aspect-ratio: 1 / 1; max-height: none; }
             .login-right-form { width: 100%; padding: 60px 20px; flex: none; }
+            /* 모바일은 터치 기반이라 손전등 효과 끄거나 조정 필요하지만 일단 보안 위해 유지 */
         }
     </style>
 </head>
 <body oncontextmenu="return false" ondragstart="return false">
 
-    <div id="blur-overlay">
-        <div class="blur-msg">
-            화면 외부 조작이 감지되어 내용을 가립니다.<br>
-            브라우저 화면을 다시 클릭해주세요.
-        </div>
-    </div>
+    <div id="flashlight-layer"></div>
 
     <div id="prtsc-blocker">
         <div class="prtsc-title">⚠️ 보안 경고 ⚠️</div>
@@ -173,10 +168,7 @@
     <div id="error-modal">
         <div class="modal-content">
             <div class="modal-title">⚠ 접근 거부</div>
-            <div class="modal-desc" id="error-msg">
-                유효하지 않은 보안 코드입니다.<br>
-                코드를 다시 확인해주십시오.
-            </div>
+            <div class="modal-desc" id="error-msg"></div>
             <button class="modal-btn" onclick="closePopup()">확인</button>
         </div>
     </div>
@@ -185,7 +177,6 @@
         <div class="login-left-image">
             <img src="img01.jpg" alt="강의 대표 이미지">
         </div>
-
         <div class="login-right-form">
             <div class="form-container">
                 <h2>초고속 편집 실무반</h2>
@@ -193,7 +184,7 @@
                     본 자료는 보안 코드를 보유한 수강생 전용입니다.<br>
                     입장 시 <span style="color:#d35400; font-weight:bold;">접속자의 IP 주소</span>가 기록됩니다.
                 </p>
-                <p class="warning" id="ip-display">접속 위치 확인 중...</p>
+                <p style="color:#27ae60; font-weight:bold; font-size:13px; margin-bottom:20px;" id="ip-display">접속 위치 확인 중...</p>
                 
                 <input type="text" id="access-code" placeholder="보안 코드 4자리 입력">
                 <button onclick="startViewer()">입장하기</button>
@@ -208,71 +199,53 @@
         /* ★ 사용자 설정 구역 ★ */
         const pdfUrl = './hhyperfastt.pdf';  
         const validCodes = ['1210', '931122', '870625', 'admin0625']; 
-        const watermarkCount = 3; 
+        const watermarkCount = 5; // 검은 배경이라 조금 늘림
         const maxAttempts = 5; 
 
         /* 시스템 로직 */
         let clientIP = "IP 추적 불가";
         let failCount = localStorage.getItem('accessFailCount') ? parseInt(localStorage.getItem('accessFailCount')) : 0;
-        let isLoggedIn = false; // 로그인 상태 체크용
+        let isLoggedIn = false;
 
-        if (failCount >= maxAttempts) {
-            showBanScreen();
-        }
+        if (failCount >= maxAttempts) showBanScreen();
 
         // IP 추적
         fetch('https://api.ipify.org?format=json')
-            .then(response => response.json())
-            .then(data => {
-                clientIP = data.ip;
+            .then(r => r.json()).then(d => {
+                clientIP = d.ip;
                 document.getElementById('ip-display').innerText = `접속 IP: ${clientIP} (기록됨)`;
-                document.getElementById('ip-display').style.color = "#27ae60"; 
-            })
-            .catch(error => {
-                document.getElementById('ip-display').innerText = "접속 IP: 비공개 모드 감지됨";
             });
 
         pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/2.16.105/pdf.worker.min.js';
 
-        /* [핵심 수정] 캡처 감지 로직 강화 
-           keyup으로 변경하여 감지율 상승 + 마우스 이탈 시 블러 처리
-        */
-        
-        // 1. 키보드 감지 (keyup 사용 - 더 잘 먹힘)
-        document.addEventListener('keyup', function(event) {
-            if (event.key === "PrintScreen") {
-                triggerSecurityBreach();
+        // [핵심] 손전등 효과 (마우스 따라다니기)
+        const flashlight = document.getElementById('flashlight-layer');
+        document.addEventListener('mousemove', function(e) {
+            if(isLoggedIn) {
+                // CSS 변수에 마우스 좌표 전달
+                flashlight.style.setProperty('--x', e.clientX + 'px');
+                flashlight.style.setProperty('--y', e.clientY + 'px');
             }
         });
 
-        // 2. [NEW] 윈도우 포커스 감지 (캡처 도구 사용 시 창이 비활성화됨을 이용)
+        // 캡처 감지 (키보드)
+        document.addEventListener('keyup', function(e) {
+            if (e.key === "PrintScreen") triggerSecurityBreach();
+        });
+
+        // 윈도우 포커스 이탈 감지 (캡처 프로그램 실행 시도 시)
         window.addEventListener('blur', function() {
-            if (isLoggedIn) { // 로그인 한 상태일 때만
-                document.getElementById('blur-overlay').style.display = 'flex';
+            if (isLoggedIn) {
+                // 블러 시에는 화면을 아예 꺼버림 (검은색)
+                document.body.style.display = 'none';
             }
         });
-
-        // 3. 윈도우 포커스 돌아오면 가림막 해제
         window.addEventListener('focus', function() {
             if (isLoggedIn) {
-                document.getElementById('blur-overlay').style.display = 'none';
+                document.body.style.display = 'block';
             }
         });
 
-        // 4. [NEW] 마우스가 화면 밖으로 나가면 가림막 (선택사항 - 너무 불편하면 주석처리 가능)
-        document.addEventListener('mouseleave', function() {
-            if (isLoggedIn) {
-                document.getElementById('blur-overlay').style.display = 'flex';
-            }
-        });
-        document.addEventListener('mouseenter', function() {
-            if (isLoggedIn) {
-                document.getElementById('blur-overlay').style.display = 'none';
-            }
-        });
-
-
-        // 보안 위반 트리거
         function triggerSecurityBreach() {
             const blocker = document.getElementById('prtsc-blocker');
             blocker.style.display = 'flex';
@@ -284,53 +257,37 @@
             }, 1500);
         }
 
-        // 엔터키 제어
         document.addEventListener('keydown', function(event) {
             if (event.key === "Enter") {
                 const modal = document.getElementById('error-modal');
                 if (document.getElementById('ban-overlay').style.display === 'flex') return; 
-                if (document.getElementById('prtsc-blocker').style.display === 'flex') return; 
-
-                if (modal.style.display === 'flex') {
-                    closePopup();
-                    return;
-                }
-                if (document.activeElement === document.getElementById('access-code')) {
-                    startViewer();
-                }
+                if (modal.style.display === 'flex') { closePopup(); return; }
+                if (document.activeElement === document.getElementById('access-code')) startViewer();
             }
         });
 
         function startViewer() {
-            if (failCount >= maxAttempts) {
-                showBanScreen();
-                return;
-            }
-
+            if (failCount >= maxAttempts) { showBanScreen(); return; }
             const inputCode = document.getElementById('access-code').value.trim();
             
             if(validCodes.includes(inputCode)) {
                 localStorage.removeItem('accessFailCount');
-                isLoggedIn = true; // 로그인 상태 변경
+                isLoggedIn = true;
                 
                 document.getElementById('login-overlay').style.display = 'none';
                 document.getElementById('pdf-container').style.display = 'flex';
                 document.getElementById('watermark-layer').style.display = 'block'; 
+                document.getElementById('flashlight-layer').style.display = 'block'; // 손전등 켜기
                 
                 const secureText = `${inputCode} / ${clientIP} / 유출금지`;
                 renderPDF();
                 initBouncingWatermarks(secureText); 
-
             } else {
                 failCount++;
                 localStorage.setItem('accessFailCount', failCount);
                 const remaining = maxAttempts - failCount;
-                
-                if (remaining <= 0) {
-                    showBanScreen();
-                } else {
-                    const msg = `유효하지 않은 보안 코드입니다.<br>코드를 다시 확인해주십시오.<br><br><strong style="color:red;">(남은 기회: ${remaining}회)</strong><br>5회 오류 시 접근이 영구 차단됩니다.`;
-                    document.getElementById('error-msg').innerHTML = msg;
+                if (remaining <= 0) { showBanScreen(); } else {
+                    document.getElementById('error-msg').innerHTML = `코드 오류.<br><strong style="color:red;">(남은 기회: ${remaining}회)</strong><br>5회 오류 시 영구 차단.`;
                     openPopup();
                 }
             }
@@ -340,17 +297,12 @@
             document.getElementById('login-overlay').style.display = 'none';
             document.getElementById('error-modal').style.display = 'none';
             document.getElementById('ban-overlay').style.display = 'flex';
-            // 차단 시에는 블러 제거 (차단 화면이 더 중요하므로)
-            document.getElementById('blur-overlay').style.display = 'none';
         }
-
-        function openPopup() {
-            document.getElementById('error-modal').style.display = 'flex';
-        }
-        function closePopup() {
-            document.getElementById('error-modal').style.display = 'none';
+        function openPopup() { document.getElementById('error-modal').style.display = 'flex'; }
+        function closePopup() { 
+            document.getElementById('error-modal').style.display = 'none'; 
             document.getElementById('access-code').value = ''; 
-            document.getElementById('access-code').focus(); 
+            document.getElementById('access-code').focus();
         }
 
         async function renderPDF() {
@@ -373,9 +325,7 @@
                     container.appendChild(canvas);
                     await page.render({ canvasContext: context, viewport: viewport }).promise;
                 }
-            } catch (error) {
-                alert("PDF 로딩 실패. 서버 업로드 상태 또는 파일명을 확인하세요.");
-            }
+            } catch (error) { alert("PDF 로딩 실패."); }
         }
 
         function initBouncingWatermarks(text) {
