@@ -8,116 +8,54 @@
 
     <style>
         /* =========================================
-           1. 기본 및 레이아웃 설정
+           기본 스타일 (디자인 유지)
            ========================================= */
         body { margin: 0; background-color: #525659; overflow-x: hidden; user-select: none; font-family: 'pretendard', 'Noto Sans KR', sans-serif;}
         * { box-sizing: border-box; }
 
-        /* [디자인] 우측 하단 강의보기 버튼 */
         #video-btn {
-            width: 120px; height: 90px;
-            position: fixed; bottom: 30px; right: 30px;
+            position: fixed; bottom: 25px; right: 25px;
             background: #e74c3c; color: white;
-            font-size: 24px; font-weight: 900;
-            display: none; /* PDF 로딩 후 표시됨 */
-            justify-content: center; align-items: center;
-            border-radius: 12px; cursor: pointer;
-            box-shadow: 0 10px 20px rgba(0,0,0,0.5);
-            z-index: 900; transition: transform 0.2s;
+            padding: 10px 20px; min-width: 130px; height: 45px; 
+            font-size: 14px; font-weight: 800;
+            display: none; justify-content: center; align-items: center; gap: 8px;
+            border-radius: 25px; cursor: pointer;
+            box-shadow: 0 4px 10px rgba(0,0,0,0.3);
+            z-index: 900; transition: all 0.2s ease;
         }
-        #video-btn:hover { transform: scale(1.05); background: #c0392b; }
+        #video-btn:hover { transform: translateY(-3px); background: #c0392b; box-shadow: 0 6px 15px rgba(0,0,0,0.4); }
 
-        /* [디자인] 영상 플레이어 오버레이 (모달) */
         #video-overlay {
             position: fixed; top: 0; left: 0; width: 100%; height: 100%;
-            background: rgba(0, 0, 0, 0.95);
-            z-index: 9998; display: none;
+            background: rgba(0, 0, 0, 0.95); z-index: 9998; display: none;
             flex-direction: column; justify-content: flex-start; align-items: center;
             padding-top: 40px; overflow-y: auto;
         }
-        
-        /* 영상 컨테이너 (16:9 비율) */
         .video-wrapper {
-            width: 90%; max-width: 1200px;
-            aspect-ratio: 16 / 9;
-            background: #000;
-            position: relative;
+            width: 90%; max-width: 1200px; aspect-ratio: 16 / 9;
+            background: #000; position: relative; margin-bottom: 30px; flex-shrink: 0;
             box-shadow: 0 0 30px rgba(255,255,255,0.1);
-            margin-bottom: 30px; flex-shrink: 0;
         }
         iframe { width: 100%; height: 100%; border: none; }
+        .close-video { position: absolute; top: 20px; right: 30px; color: white; font-size: 40px; cursor: pointer; font-weight: bold; z-index: 10001; }
 
-        .close-video {
-            position: absolute; top: 20px; right: 30px;
-            color: white; font-size: 40px; cursor: pointer; font-weight: bold; z-index: 10001;
-        }
-
-        /* [NEW] 타임스탬프 3단 레이아웃 */
-        .timestamp-container {
-            width: 90%; max-width: 1200px;
-            display: grid;
-            grid-template-columns: 1fr 1fr 1fr; /* 3등분 */
-            gap: 20px;
-            margin-bottom: 50px;
-        }
-
-        .ts-column {
-            background: #2b2b2b;
-            padding: 20px;
-            border-radius: 10px;
-            border: 1px solid #444;
-        }
-
-        .ts-header {
-            color: #e74c3c; font-size: 18px; font-weight: 900;
-            margin-bottom: 15px; text-transform: uppercase;
-            border-bottom: 2px solid #444; padding-bottom: 10px;
-        }
-
-        /* [NEW] 흰색 버튼 스타일 (요청사항 반영) */
-        .ts-btn {
-            display: block; width: 100%;
-            background: #ffffff; /* 흰색 배경 */
-            color: #111111;      /* 검은색 폰트 */
-            font-size: 15px; font-weight: 600;
-            padding: 12px 15px;
-            margin-bottom: 10px;
-            border: 1px solid #ccc; border-radius: 6px;
-            cursor: pointer; text-align: left;
-            transition: all 0.2s;
-            
-            /* 말줄임표 처리 (두 줄 안 되게) */
-            white-space: nowrap; 
-            overflow: hidden; 
-            text-overflow: ellipsis;
-        }
-
-        .ts-btn:hover {
-            background: #e74c3c; /* 호버 시 포인트 컬러 */
-            color: white;
-            border-color: #c0392b;
-            padding-left: 20px; /* 살짝 밀리는 효과 */
-        }
-
-        /* 강의 선택 버튼들 (상단) */
-        .class-selector {
-            display: flex; gap: 10px; margin-bottom: 20px;
-        }
-        .class-btn {
-            padding: 10px 20px; background: #444; color: #fff; border: none; border-radius: 20px; cursor: pointer; font-weight: bold;
-        }
+        .timestamp-container { width: 90%; max-width: 1200px; display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 20px; margin-bottom: 50px; }
+        .ts-column { background: #2b2b2b; padding: 20px; border-radius: 10px; border: 1px solid #444; }
+        .ts-header { color: #e74c3c; font-size: 18px; font-weight: 900; margin-bottom: 15px; border-bottom: 2px solid #444; padding-bottom: 10px; }
+        .ts-btn { display: block; width: 100%; background: #ffffff; color: #111111; font-size: 14px; font-weight: 600; padding: 12px 15px; margin-bottom: 10px; border: 1px solid #ccc; border-radius: 6px; cursor: pointer; text-align: left; transition: all 0.2s; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+        .ts-btn:hover { background: #e74c3c; color: white; border-color: #c0392b; padding-left: 20px; }
+        .class-selector { display: flex; gap: 10px; margin-bottom: 20px; }
+        .class-btn { padding: 10px 20px; background: #444; color: #fff; border: none; border-radius: 20px; cursor: pointer; font-weight: bold; }
         .class-btn:hover { background: #e74c3c; }
 
-        /* 모바일 반응형 */
         @media (max-width: 900px) {
-            .timestamp-container { grid-template-columns: 1fr; } /* 모바일은 세로로 */
+            .timestamp-container { grid-template-columns: 1fr; }
             #login-overlay { flex-direction: column; position: absolute; height: auto; min-height: 100vh; }
             .login-left-image { width: 100%; aspect-ratio: 1 / 1; max-height: none; }
             .login-right-form { width: 100%; padding: 60px 20px; flex: none; }
-            #video-btn { width: 90%; right: 5%; bottom: 20px; font-size: 18px; height: 60px;}
+            #video-btn { bottom: 20px; right: 20px; }
         }
 
-        /* --- 기존 보안 및 로그인 CSS 유지 --- */
         #login-overlay { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: #fff; z-index: 9990; display: flex; overflow-y: auto; }
         .login-left-image { width: 50%; background-color: #f0f0f0; display: flex; justify-content: center; align-items: center; overflow: hidden; position: relative; }
         .login-left-image img { width: 100%; height: 100%; object-fit: cover; }
@@ -125,7 +63,8 @@
         .form-container { width: 100%; max-width: 400px; text-align: center; }
         h2 { font-size: 32px; margin-bottom: 10px; color: #333; font-weight: 800; }
         p.desc { color: #666; margin-bottom: 30px; line-height: 1.6; font-size: 15px; }
-        input { padding: 15px; font-size: 18px; border: 2px solid #ddd; border-radius: 8px; width: 100%; text-align: center; margin-bottom: 15px; }
+        input { padding: 15px; font-size: 16px; border: 2px solid #ddd; border-radius: 8px; width: 100%; text-align: center; margin-bottom: 15px; outline: none;}
+        input:focus { border-color: #333; }
         button { padding: 15px; font-size: 18px; background: #222; color: white; border: none; border-radius: 8px; cursor: pointer; width: 100%; font-weight: bold; }
         
         #error-modal { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.6); z-index: 9999; justify-content: center; align-items: center; }
@@ -138,50 +77,48 @@
         #pdf-container { display: flex; flex-direction: column; align-items: center; padding: 20px 0; display: none; }
         canvas { margin-bottom: 20px; box-shadow: 0 5px 25px rgba(0,0,0,0.5); max-width: 100%; height: auto; }
         #watermark-layer { position: fixed; top: 0; left: 0; width: 100%; height: 100%; pointer-events: none; z-index: 9999; display: none; overflow: hidden; }
-        .bouncing-text { position: absolute; font-size: 20px; font-weight: 900; color: rgba(255, 255, 255, 0.15); white-space: nowrap; user-select: none; }
+        .bouncing-text { position: absolute; font-size: 18px; font-weight: 900; color: rgba(255, 255, 255, 0.18); white-space: nowrap; user-select: none; }
     </style>
 </head>
 <body oncontextmenu="return false" ondragstart="return false">
 
+    <div id="login-overlay">
+        <div class="login-left-image"><img src="img01.jpg" alt="강의 대표 이미지"></div>
+        <div class="login-right-form">
+            <div class="form-container">
+                <h2>초고속 편집 실무반</h2>
+                <p class="desc">구글 명단에 등록된 수강생 전용입니다.<br>입장 시 정보가 실시간으로 대조됩니다.</p>
+                <p id="ip-display" style="color:#27ae60; font-weight:bold; margin-bottom:20px;">서버 연결 대기 중...</p>
+                
+                <input type="text" id="user-name" placeholder="성함 (명단에 등록된 이름)">
+                <input type="text" id="access-code" placeholder="보안 코드 4자리 입력">
+                
+                <button id="login-btn" onclick="checkSheetAndLogin()">입장하기</button>
+            </div>
+        </div>
+    </div>
+
     <div id="video-overlay">
         <div class="close-video" onclick="closeVideoPlayer()">✕</div>
-        
         <div class="class-selector">
             <button class="class-btn" onclick="playVideo(0)">1강. OT</button>
             <button class="class-btn" onclick="playVideo(1)">2강. 컷편집</button>
             <button class="class-btn" onclick="playVideo(2)">3강. 자막</button>
         </div>
-
         <div class="video-wrapper">
             <iframe id="yt-player" src="" allow="autoplay; encrypted-media" allowfullscreen></iframe>
         </div>
-
         <div class="timestamp-container">
-            <div class="ts-column">
-                <div class="ts-header">1. Set up</div>
-                <div id="setup-list"></div>
-            </div>
-
-            <div class="ts-column">
-                <div class="ts-header">2. Know-how</div>
-                <div id="knowhow-list"></div>
-            </div>
-
-            <div class="ts-column">
-                <div class="ts-header">3. Tips</div>
-                <div id="tips-list"></div>
-            </div>
+            <div class="ts-column"><div class="ts-header">1. Set up</div><div id="setup-list"></div></div>
+            <div class="ts-column"><div class="ts-header">2. Know-how</div><div id="knowhow-list"></div></div>
+            <div class="ts-column"><div class="ts-header">3. Tips</div><div id="tips-list"></div></div>
         </div>
     </div>
 
-    <div id="video-btn" onclick="openVideoPlayer()">▶ 강의영상 다시보기</div>
-
+    <div id="video-btn" onclick="openVideoPlayer()"><span>▶ 강의 다시보기</span></div>
     <div id="blur-overlay"><div style="font-size:24px; font-weight:bold;">화면을 클릭해주세요.</div></div>
     <div id="prtsc-blocker"><div style="font-size:60px; font-weight:900;">⚠️ 보안 경고 ⚠️</div></div>
-    <div id="ban-overlay">
-        <div style="font-size:80px;">🚫</div>
-        <div style="font-size:40px; font-weight:900;">ACCESS DENIED</div>
-    </div>
+    <div id="ban-overlay"><div style="font-size:80px;">🚫</div><div style="font-size:40px; font-weight:900;">ACCESS DENIED</div></div>
 
     <div id="error-modal">
         <div class="modal-content">
@@ -191,71 +128,48 @@
         </div>
     </div>
 
-    <div id="login-overlay">
-        <div class="login-left-image"><img src="img01.jpg" alt="강의 대표 이미지"></div>
-        <div class="login-right-form">
-            <div class="form-container">
-                <h2>초고속 편집 실무반</h2>
-                <p class="desc">보안 코드를 보유한 수강생 전용입니다.<br>입장 시 IP 주소가 기록됩니다.</p>
-                <p id="ip-display" style="color:#27ae60; font-weight:bold; margin-bottom:20px;">접속 위치 확인 중...</p>
-                <input type="text" id="access-code" placeholder="보안 코드 4자리 입력">
-                <button onclick="startViewer()">입장하기</button>
-            </div>
-        </div>
-    </div>
-
     <div id="pdf-container"></div>
     <div id="watermark-layer"></div>
 
     <script>
-        /* [관리자 프리패스] */
+        /* ============================================================
+           ★ [1] 구글 스프레드 시트 연동 설정 (필수 수정) ★
+           ============================================================ */
+        // 파일 -> 공유 -> 웹에 게시 -> '쉼표로 구분된 값(.csv)' 선택 후 링크 복사
+        const sheetCsvUrl = "여기에_구글_스프레드시트_CSV_링크를_붙여넣으세요"; 
+        
+        /* [관리자 마스터키] */
         (function() {
             const urlParams = new URLSearchParams(window.location.search);
             if (urlParams.get('admin') === 'pass') {
                 window.addEventListener('DOMContentLoaded', () => {
                      document.getElementById('ip-display').innerText = "✅ 관리자 프리패스 승인";
-                     const entryBtn = document.querySelector('.form-container button');
-                     if(entryBtn) { entryBtn.disabled = false; entryBtn.innerText = "관리자 입장하기"; }
+                     document.getElementById('user-name').value = "관리자";
+                     document.getElementById('access-code').value = "MASTER"; 
+                     const entryBtn = document.getElementById('login-btn');
+                     entryBtn.innerText = "관리자 입장하기";
+                     // 관리자는 시트 검사 함수 대신 바로 통과 함수 연결
+                     entryBtn.onclick = () => enterSuccess("관리자", "MASTER");
                 });
             }
         })();
 
         /* ============================================================
-           ★ [데이터 설정] 영상 ID 및 타임스탬프 수정하는 곳 ★
+           ★ [2] 영상 데이터 설정
            ============================================================ */
         const videoData = [
-            // [0번: 1강 데이터]
             {
                 id: "jNQXAC9IVRw", 
-                setup: [
-                    { time: 0, label: "강의 시작 및 준비" },
-                    { time: 60, label: "프리미어 프로 초기 세팅" }
-                ],
-                knowhow: [
-                    { time: 180, label: "단축키 설정 방법" },
-                    { time: 300, label: "패널 정리 노하우" }
-                ],
-                tips: [
-                    { time: 600, label: "작업 속도 2배 올리기" },
-                    { time: 900, label: "저장 경로 관리 팁" }
-                ]
+                setup: [ { time: 0, label: "강의 시작 및 준비" }, { time: 60, label: "프리미어 프로 초기 세팅" } ],
+                knowhow: [ { time: 180, label: "단축키 설정 방법" }, { time: 300, label: "패널 정리 노하우" } ],
+                tips: [ { time: 600, label: "작업 속도 2배 올리기" }, { time: 900, label: "저장 경로 관리 팁" } ]
             },
-            // [1번: 2강 데이터]
             {
                 id: "M7lc1UVf-VE",
-                setup: [
-                    { time: 0, label: "컷편집 시작하기" },
-                ],
-                knowhow: [
-                    { time: 120, label: "QWE 단축키 활용" },
-                    { time: 240, label: "리플 삭제의 이해" }
-                ],
-                tips: [
-                    { time: 400, label: "NG컷 빠르게 골라내기" },
-                    { time: 550, label: "음악 박자 맞추기" }
-                ]
+                setup: [ { time: 0, label: "컷편집 시작하기" } ],
+                knowhow: [ { time: 120, label: "QWE 단축키 활용" }, { time: 240, label: "리플 삭제의 이해" } ],
+                tips: [ { time: 400, label: "NG컷 빠르게 골라내기" }, { time: 550, label: "음악 박자 맞추기" } ]
             },
-            // [2번: 3강 데이터]
             {
                 id: "L_jWHffIx5E",
                 setup: [ { time: 0, label: "자막 툴 켜기" } ],
@@ -266,50 +180,110 @@
 
         /* 사용자 설정 */
         const pdfUrl = './hhyperfastt.pdf';  
-        const validCodes = ['1210', '931122', '870625', 'admin0625']; 
         const maxAttempts = 5; 
-
         let failCount = 0;
         try { failCount = parseInt(localStorage.getItem('accessFailCount') || 0); } catch(e) {}
 
-        /* 유튜브 플레이어 로직 (버튼 생성 포함) */
-        function openVideoPlayer() {
-            document.getElementById('video-overlay').style.display = 'flex';
-            playVideo(0); 
+        /* [핵심] 구글 시트 로그인 로직 */
+        async function checkSheetAndLogin() {
+            if (failCount >= maxAttempts) { showBan(); return; }
+
+            const inputName = document.getElementById('user-name').value.trim();
+            const inputCode = document.getElementById('access-code').value.trim();
+            const btn = document.getElementById('login-btn');
+            const statusMsg = document.getElementById('ip-display');
+
+            if(!inputName || !inputCode) { alert("이름과 코드를 모두 입력해주세요."); return; }
+
+            // 로딩 표시
+            btn.disabled = true;
+            btn.innerText = "명단 확인 중...";
+            statusMsg.innerText = "서버 데이터 대조 중...";
+
+            try {
+                // 구글 시트 데이터 가져오기 (CSV)
+                const response = await fetch(sheetCsvUrl);
+                if (!response.ok) throw new Error("시트 연결 실패");
+                const text = await response.text();
+
+                // CSV 파싱 (줄바꿈으로 나누고, 쉼표로 나눔)
+                const rows = text.split('\n').map(row => row.split(','));
+                
+                // 일치하는 사용자 찾기 (헤더 행 제외하고 검사)
+                let matched = false;
+                for (let i = 1; i < rows.length; i++) {
+                    const rowName = rows[i][0] ? rows[i][0].trim() : "";
+                    const rowCode = rows[i][1] ? rows[i][1].trim() : "";
+                    
+                    // 이름과 코드가 정확히 일치하는지 확인
+                    if (rowName === inputName && rowCode === inputCode) {
+                        matched = true;
+                        break;
+                    }
+                }
+
+                if (matched) {
+                    try { localStorage.removeItem('accessFailCount'); } catch(e){}
+                    enterSuccess(inputName, inputCode);
+                } else {
+                    handleFail("정보 불일치");
+                }
+
+            } catch (error) {
+                console.error(error);
+                alert("명단 확인 중 오류가 발생했습니다.\n관리자에게 문의하거나 인터넷 연결을 확인해주세요.");
+                btn.disabled = false;
+                btn.innerText = "입장하기";
+            }
         }
 
-        function closeVideoPlayer() {
-            document.getElementById('video-overlay').style.display = 'none';
-            document.getElementById('yt-player').src = ""; 
+        function handleFail(reason) {
+            failCount++;
+            try { localStorage.setItem('accessFailCount', failCount); } catch(e){}
+            
+            const btn = document.getElementById('login-btn');
+            btn.disabled = false;
+            btn.innerText = "입장하기";
+            document.getElementById('ip-display').innerText = "접속 위치 확인 중...";
+
+            if (maxAttempts - failCount <= 0) showBan();
+            else {
+                document.getElementById('error-msg').innerHTML = `${reason}.<br>구글 명단에 등록되었는지 확인해주세요.<br><strong style="color:red;">(남은 기회: ${maxAttempts - failCount}회)</strong>`;
+                document.getElementById('error-modal').style.display = 'flex';
+            }
         }
 
+        /* 성공 시 입장 처리 */
+        function enterSuccess(userName, code) {
+            document.getElementById('login-overlay').style.display = 'none';
+            document.getElementById('pdf-container').style.display = 'flex';
+            document.getElementById('watermark-layer').style.display = 'block';
+            renderPDF();
+            
+            const secureText = `${code} / ${clientIP} / ${userName} / 유출 시 모든 책임은 본인에게 있습니다`;
+            initWatermark(secureText);
+        }
+
+        /* 기타 기능 (유튜브, 워터마크, PDF 등) */
+        function openVideoPlayer() { document.getElementById('video-overlay').style.display = 'flex'; playVideo(0); }
+        function closeVideoPlayer() { document.getElementById('video-overlay').style.display = 'none'; document.getElementById('yt-player').src = ""; }
+        
         function playVideo(index) {
             const data = videoData[index];
             if(!data) return;
-
-            // 영상 재생 (일부공개 지원)
             const embedUrl = `https://www.youtube.com/embed/${data.id}?autoplay=1&rel=0&modestbranding=1&enablejsapi=1&controls=1`;
             document.getElementById('yt-player').src = embedUrl;
-
-            // 버튼 생성 함수
             const createButtons = (listId, items) => {
                 const container = document.getElementById(listId);
                 container.innerHTML = "";
-                if(items && items.length > 0) {
-                    items.forEach(item => {
-                        const btn = document.createElement('button');
-                        btn.className = 'ts-btn';
-                        btn.innerHTML = `⏱ ${item.label}`;
-                        btn.title = item.label; // 마우스 올리면 전체 내용 보임
-                        btn.onclick = () => seekTo(item.time);
-                        container.appendChild(btn);
-                    });
-                } else {
-                    container.innerHTML = "<div style='color:#777; font-size:13px;'>내용 없음</div>";
-                }
+                items.forEach(item => {
+                    const btn = document.createElement('button');
+                    btn.className = 'ts-btn';
+                    btn.innerHTML = `⏱ ${item.label}`;
+                    btn.onclick = () => seekTo(item.time);
+                    container.appendChild(btn);
+                });
             };
-
-            // 3개 구역에 각각 버튼 넣기
             createButtons('setup-list', data.setup);
             createButtons('knowhow-list', data.knowhow);
             createButtons('tips-list', data.tips);
@@ -320,58 +294,20 @@
             iframe.contentWindow.postMessage(JSON.stringify({ event: 'command', func: 'seekTo', args: [seconds, true] }), '*');
         }
 
-        /* 로그인 및 PDF 로직 */
-        let clientIP = "확인 중...";
-        
-        // IP 확인 (실패 시에도 작동 보장)
+        let clientIP = "IP 확인 중";
         fetch('https://api.ipify.org?format=json')
-            .then(r => r.json()).then(d => updateIP(d.ip))
-            .catch(() => { fetch('https://ipapi.co/json/').then(r=>r.json()).then(d=>updateIP(d.ip)).catch(()=>updateIP("추적불가")); });
+            .then(r => r.json()).then(d => { clientIP = d.ip; document.getElementById('ip-display').innerText = `접속 IP: ${clientIP}`; })
+            .catch(() => document.getElementById('ip-display').innerText = "IP 추적 불가 (AdBlock 감지)");
 
-        function updateIP(ip) {
-            clientIP = ip;
-            document.getElementById('ip-display').innerText = `접속 IP: ${clientIP}`;
-        }
+        function showBan() { document.getElementById('login-overlay').style.display = 'none'; document.getElementById('ban-overlay').style.display = 'flex'; }
+        function closePopup() { document.getElementById('error-modal').style.display = 'none'; }
 
-        function startViewer() {
-            const urlParams = new URLSearchParams(window.location.search);
-            if (urlParams.get('admin') === 'pass') { enterSuccess(); return; } // 관리자 통과
-
-            if (failCount >= maxAttempts) { showBan(); return; }
-            
-            const input = document.getElementById('access-code').value.trim();
-            if(validCodes.includes(input)) {
-                try { localStorage.removeItem('accessFailCount'); } catch(e){}
-                enterSuccess();
-            } else {
-                failCount++;
-                try { localStorage.setItem('accessFailCount', failCount); } catch(e){}
-                if (maxAttempts - failCount <= 0) showBan();
-                else alert(`코드 오류! (남은 기회: ${maxAttempts - failCount}회)`);
-            }
-        }
-
-        function enterSuccess() {
-            document.getElementById('login-overlay').style.display = 'none';
-            document.getElementById('pdf-container').style.display = 'flex';
-            document.getElementById('watermark-layer').style.display = 'block';
-            renderPDF();
-            initWatermark(`수강생 전용 / ${clientIP}`);
-        }
-
-        function showBan() {
-            document.getElementById('login-overlay').style.display = 'none';
-            document.getElementById('ban-overlay').style.display = 'flex';
-        }
-
-        /* PDF 렌더링 (단순화) */
         async function renderPDF() {
             try {
                 pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/2.16.105/pdf.worker.min.js';
                 const loadingTask = pdfjsLib.getDocument(pdfUrl);
                 const pdf = await loadingTask.promise;
                 const container = document.getElementById('pdf-container');
-                
                 for (let i = 1; i <= pdf.numPages; i++) {
                     const page = await pdf.getPage(i);
                     const viewport = page.getViewport({ scale: 1.5 });
@@ -380,11 +316,10 @@
                     await page.render({ canvasContext: canvas.getContext('2d'), viewport: viewport }).promise;
                     container.appendChild(canvas);
                 }
-                document.getElementById('video-btn').style.display = 'flex'; // 영상 버튼 표시
+                document.getElementById('video-btn').style.display = 'flex'; 
             } catch (e) { console.error(e); }
         }
 
-        /* 워터마크 */
         function initWatermark(text) {
             const layer = document.getElementById('watermark-layer');
             for(let i=0; i<3; i++) {
@@ -396,7 +331,7 @@
         }
         function animate(el) {
             let x = Math.random() * window.innerWidth, y = Math.random() * window.innerHeight;
-            let dx = 2, dy = 2;
+            let dx = 1.5, dy = 1.5; 
             function step() {
                 x += dx; y += dy;
                 if(x <= 0 || x+el.offsetWidth >= window.innerWidth) dx = -dx;
@@ -407,10 +342,9 @@
             step();
         }
 
-        /* 보안 (키보드 막기) */
         document.addEventListener('keydown', e => {
             const urlParams = new URLSearchParams(window.location.search);
-            if (urlParams.get('admin') === 'pass') return; // 관리자는 허용
+            if (urlParams.get('admin') === 'pass') return; 
             if (e.key === "PrintScreen") {
                 document.getElementById('prtsc-blocker').style.display = 'flex';
                 setTimeout(() => showBan(), 1000);
