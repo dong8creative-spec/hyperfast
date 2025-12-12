@@ -13,6 +13,17 @@
         body { margin: 0; background-color: #525659; overflow-x: hidden; user-select: none; font-family: 'pretendard', 'Noto Sans KR', sans-serif;}
         * { box-sizing: border-box; }
 
+        /* [NEW] 화면 가림막 (포커스 잃었을 때) */
+        #blur-overlay {
+            position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+            background: rgba(0, 0, 0, 0.95); /* 거의 안 보이게 */
+            z-index: 99995; /* 팝업보단 아래, 내용보단 위 */
+            display: none;
+            flex-direction: column; justify-content: center; align-items: center;
+            color: white; text-align: center;
+        }
+        .blur-msg { font-size: 24px; font-weight: bold; margin-bottom: 20px; }
+
         /* 캡처 감지 빨간 화면 */
         #prtsc-blocker {
             position: fixed; top: 0; left: 0; width: 100%; height: 100%;
@@ -134,6 +145,13 @@
 </head>
 <body oncontextmenu="return false" ondragstart="return false">
 
+    <div id="blur-overlay">
+        <div class="blur-msg">
+            화면 외부 조작이 감지되어 내용을 가립니다.<br>
+            브라우저 화면을 다시 클릭해주세요.
+        </div>
+    </div>
+
     <div id="prtsc-blocker">
         <div class="prtsc-title">⚠️ 보안 경고 ⚠️</div>
         <div class="prtsc-desc">
@@ -196,6 +214,7 @@
         /* 시스템 로직 */
         let clientIP = "IP 추적 불가";
         let failCount = localStorage.getItem('accessFailCount') ? parseInt(localStorage.getItem('accessFailCount')) : 0;
+        let isLoggedIn = false; // 로그인 상태 체크용
 
         if (failCount >= maxAttempts) {
             showBanScreen();
@@ -215,45 +234,58 @@
 
         pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/2.16.105/pdf.worker.min.js';
 
-        /* [핵심] 캡처 감지 & 영구 차단 트리거 함수 
-           - Windows: PrintScreen 키
-           - Mac: Cmd(Meta) + Shift + 3 / 4 / 5
+        /* [핵심 수정] 캡처 감지 로직 강화 
+           keyup으로 변경하여 감지율 상승 + 마우스 이탈 시 블러 처리
         */
+        
+        // 1. 키보드 감지 (keyup 사용 - 더 잘 먹힘)
+        document.addEventListener('keyup', function(event) {
+            if (event.key === "PrintScreen") {
+                triggerSecurityBreach();
+            }
+        });
+
+        // 2. [NEW] 윈도우 포커스 감지 (캡처 도구 사용 시 창이 비활성화됨을 이용)
+        window.addEventListener('blur', function() {
+            if (isLoggedIn) { // 로그인 한 상태일 때만
+                document.getElementById('blur-overlay').style.display = 'flex';
+            }
+        });
+
+        // 3. 윈도우 포커스 돌아오면 가림막 해제
+        window.addEventListener('focus', function() {
+            if (isLoggedIn) {
+                document.getElementById('blur-overlay').style.display = 'none';
+            }
+        });
+
+        // 4. [NEW] 마우스가 화면 밖으로 나가면 가림막 (선택사항 - 너무 불편하면 주석처리 가능)
+        document.addEventListener('mouseleave', function() {
+            if (isLoggedIn) {
+                document.getElementById('blur-overlay').style.display = 'flex';
+            }
+        });
+        document.addEventListener('mouseenter', function() {
+            if (isLoggedIn) {
+                document.getElementById('blur-overlay').style.display = 'none';
+            }
+        });
+
+
+        // 보안 위반 트리거
         function triggerSecurityBreach() {
-            // 1. 빨간 화면 노출
             const blocker = document.getElementById('prtsc-blocker');
             blocker.style.display = 'flex';
-
-            // 2. 차단 카운트 최대치로 설정 (영구 차단)
             failCount = maxAttempts;
             localStorage.setItem('accessFailCount', failCount);
-
-            // 3. 1.5초 후 차단 화면 전환
             setTimeout(function() {
                 blocker.style.display = 'none';
                 showBanScreen();
             }, 1500);
         }
 
-        /* 키보드 이벤트 리스너 통합 (캡처 & 엔터) */
+        // 엔터키 제어
         document.addEventListener('keydown', function(event) {
-            
-            // 1. Windows 캡처 감지 (PrintScreen)
-            if (event.key === "PrintScreen") {
-                triggerSecurityBreach();
-                return;
-            }
-
-            // 2. Mac 캡처 감지 (Cmd + Shift + 3, 4, 5)
-            if (event.metaKey && event.shiftKey) {
-                if (event.key === '3' || event.key === '4' || event.key === '5') {
-                    triggerSecurityBreach();
-                    event.preventDefault(); // 가능한 경우 브라우저 기본 동작 막기 시도
-                    return;
-                }
-            }
-
-            // 3. 엔터키 입장 기능
             if (event.key === "Enter") {
                 const modal = document.getElementById('error-modal');
                 if (document.getElementById('ban-overlay').style.display === 'flex') return; 
@@ -269,13 +301,6 @@
             }
         });
 
-        /* (보조) keyup에서도 Windows PrintScreen 감지 (브라우저 호환성) */
-        document.addEventListener('keyup', function(event) {
-            if (event.key === "PrintScreen") {
-                triggerSecurityBreach();
-            }
-        });
-
         function startViewer() {
             if (failCount >= maxAttempts) {
                 showBanScreen();
@@ -286,6 +311,7 @@
             
             if(validCodes.includes(inputCode)) {
                 localStorage.removeItem('accessFailCount');
+                isLoggedIn = true; // 로그인 상태 변경
                 
                 document.getElementById('login-overlay').style.display = 'none';
                 document.getElementById('pdf-container').style.display = 'flex';
@@ -314,6 +340,8 @@
             document.getElementById('login-overlay').style.display = 'none';
             document.getElementById('error-modal').style.display = 'none';
             document.getElementById('ban-overlay').style.display = 'flex';
+            // 차단 시에는 블러 제거 (차단 화면이 더 중요하므로)
+            document.getElementById('blur-overlay').style.display = 'none';
         }
 
         function openPopup() {
