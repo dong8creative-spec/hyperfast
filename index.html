@@ -7,49 +7,52 @@
     <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/2.16.105/pdf.min.js"></script>
 
     <style>
-        /* 기본 설정 */
+        /* =========================================
+           1. 기본 및 레이아웃 설정
+           ========================================= */
         body { margin: 0; background-color: #525659; overflow-x: hidden; user-select: none; font-family: 'pretendard', 'Noto Sans KR', sans-serif;}
         * { box-sizing: border-box; }
 
-        /* 1. 로그인 레이아웃 컨테이너 */
+        /* 로그인 전체 화면 */
         #login-overlay {
             position: fixed; top: 0; left: 0; width: 100%; height: 100%;
             background: #fff; z-index: 9999; display: flex;
-            overflow-y: auto; /* 화면이 너무 작을 경우 스크롤 허용 */
+            overflow-y: auto; /* 화면 작을 때 스크롤 허용 */
         }
 
-        /* 2. 왼쪽: 이미지 영역 (1:1 비율 고정 핵심 CSS) */
+        /* 왼쪽: 이미지 영역 (1:1 비율 고정) */
         .login-left-image {
-            width: 50%; /* 기본 너비 50% */
-            aspect-ratio: 1 / 1; /* ★핵심: 항상 정사각형 비율 유지★ */
-            max-height: 100vh; /* 화면 높이보다 커지는 것 방지 */
+            width: 50%; 
+            aspect-ratio: 1 / 1; /* 정사각형 비율 강제 */
+            max-height: 100vh;
             background-color: #f0f0f0;
             display: flex; justify-content: center; align-items: center; 
-            overflow: hidden;
-            flex-shrink: 0; /* 비율 유지를 위해 줄어들지 않음 */
+            overflow: hidden; flex-shrink: 0;
+            position: relative;
         }
         .login-left-image img { 
-            width: 100%; height: 100%; 
-            object-fit: cover; /* 이미지가 정사각형 영역을 꽉 채우도록 설정 */
+            width: 100%; height: 100%; object-fit: cover; 
         }
 
-        /* 3. 오른쪽: 입력 폼 영역 */
+        /* 오른쪽: 입력 폼 영역 */
         .login-right-form {
-            flex: 1; /* 남은 공간 차지 */
+            flex: 1; 
             display: flex; flex-direction: column; justify-content: center; align-items: center;
-            padding: 40px; background: white;
-            min-height: 500px; /* 최소 높이 확보 */
+            padding: 40px; background: white; min-height: 500px;
         }
 
-        /* 폼 스타일링 */
+        /* 폼 디자인 */
         .form-container { width: 100%; max-width: 400px; text-align: center; }
-        h2 { font-size: 32px; margin-bottom: 10px; color: #333; }
-        p.desc { color: #666; margin-bottom: 40px; line-height: 1.5; }
+        h2 { font-size: 32px; margin-bottom: 10px; color: #333; font-weight: 800; }
+        p.desc { color: #666; margin-bottom: 30px; line-height: 1.6; font-size: 15px; }
+        p.warning { color: #e74c3c; font-weight: bold; font-size: 13px; margin-bottom: 20px; }
+        
         input { 
             padding: 15px; font-size: 18px; border: 2px solid #ddd; border-radius: 8px; 
             width: 100%; text-align: center; margin-bottom: 15px; transition: all 0.3s;
         }
         input:focus { border-color: #333; outline: none; }
+        
         button { 
             padding: 15px; font-size: 18px; background: #222; color: white; 
             border: none; border-radius: 8px; cursor: pointer; width: 100%; font-weight: bold;
@@ -57,49 +60,50 @@
         }
         button:hover { background: #555; }
 
-        /* PDF 영역 스타일 */
+        /* =========================================
+           2. PDF 뷰어 영역
+           ========================================= */
         #pdf-container {
-            display: flex; flex-direction: column; align-items: center; padding: 20px 0; display: none; 
+            display: flex; flex-direction: column; align-items: center; padding: 20px 0;
+            display: none; /* 초기엔 숨김 */
         }
         canvas {
-            margin-bottom: 20px; box-shadow: 0 5px 25px rgba(0,0,0,0.5); max-width: 100%; height: auto;
+            margin-bottom: 20px; box-shadow: 0 5px 25px rgba(0,0,0,0.5);
+            max-width: 100%; height: auto;
         }
 
-        /* 워터마크 스타일 */
+        /* =========================================
+           3. DVD 밈 스타일 워터마크 (Bouncing)
+           ========================================= */
         #watermark-layer {
-            position: fixed; top: -50%; left: -50%; width: 200%; height: 200%;
-            pointer-events: none; z-index: 999;
-            display: flex; flex-wrap: wrap; justify-content: space-around; align-content: space-around;
-            transform: rotate(-30deg); animation: floatMove 60s linear infinite;
-            opacity: 0.15; display: none;
+            position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+            pointer-events: none; /* 클릭 통과 */
+            z-index: 999; display: none; overflow: hidden;
         }
-        .watermark-text {
-            width: 300px; height: 150px; font-size: 24px; font-weight: bold; color: #000;
-            display: flex; align-items: center; justify-content: center;
-        }
-        @keyframes floatMove {
-            0% { transform: rotate(-30deg) translate(0, 0); }
-            50% { transform: rotate(-30deg) translate(-50px, -50px); }
-            100% { transform: rotate(-30deg) translate(0, 0); }
+        
+        /* 개별 워터마크 스타일 */
+        .bouncing-text {
+            position: absolute;
+            font-size: 20px; font-weight: 900; color: rgba(0, 0, 0, 0.15); /* 연한 검정색 */
+            white-space: nowrap;
+            user-select: none;
+            /* 텍스트 테두리를 줘서 가독성 높임 (선택사항) */
+            text-shadow: 1px 1px 2px rgba(255, 255, 255, 0.5);
         }
 
-        /* 모바일 반응형 (좁은 화면) */
+        /* =========================================
+           4. 모바일 반응형
+           ========================================= */
         @media (max-width: 900px) {
             #login-overlay { 
-                flex-direction: column; /* 위아래 배치 */
-                height: auto; min-height: 100vh; /* 스크롤 가능하게 변경 */
-                position: absolute; /* 고정 해제 */
+                flex-direction: column; position: absolute; height: auto; min-height: 100vh; 
             }
             .login-left-image { 
-                width: 100%; /* 너비 100% */
-                aspect-ratio: 1 / 1; /* ★모바일에서도 정사각형 유지★ */
-                max-height: none; /* 높이 제한 해제 */
+                width: 100%; aspect-ratio: 1 / 1; max-height: none; 
             }
             .login-right-form { 
                 width: 100%; padding: 60px 20px; flex: none; 
-                min-height: auto; 
             }
-            h2 { font-size: 24px; }
         }
     </style>
 </head>
@@ -107,55 +111,89 @@
 
     <div id="login-overlay">
         <div class="login-left-image">
-            <img src="https://via.placeholder.com/1000x1000.png?text=SQUARE+IMAGE+1:1" alt="강의 대표 이미지.jpg">
+            <img src="https://via.placeholder.com/1000x1000.png?text=CLASS+OPEN" alt="강의 대표 이미지">
         </div>
 
         <div class="login-right-form">
             <div class="form-container">
-                <h2>보안 자료 열람</h2>
-                <p class="desc">발급받으신 보안 코드를 입력해주십시오.<br>접속 기록 및 IP가 워터마크로 기록됩니다.</p>
-                <input type="text" id="access-code" placeholder="보안 코드 입력">
+                <h2>초고속 편집 실무반</h2>
+                <p class="desc">
+                    본 자료는 보안 코드를 보유한 수강생 전용입니다.<br>
+                    입장 시 <span style="color:#d35400; font-weight:bold;">접속자의 IP 주소</span>가 기록됩니다.
+                </p>
+                <p class="warning" id="ip-display">접속 위치 확인 중...</p>
+                
+                <input type="text" id="access-code" placeholder="보안 코드 4자리 입력">
                 <button onclick="startViewer()">입장하기</button>
             </div>
         </div>
     </div>
 
     <div id="pdf-container"></div>
+    
     <div id="watermark-layer"></div>
 
     <script>
-        // ★★★ 설정 1: PDF 파일명 ★★★
-        const url = './hyperfast.pdf'; 
+        /* =========================================
+           ★ 사용자 설정 구역 (여기만 고치세요) ★
+           ========================================= */
+        const pdfUrl = './sample.pdf';  // PDF 파일명 (대소문자 정확히)
+        const validCodes = ['1210', '931122', '870625', 'admin0625']; // 입장 가능한 코드 목록
+        const watermarkCount = 3; // 화면에 떠다닐 워터마크 개수 (너무 많으면 정신없음)
 
-        // ★★★ 설정 2: 입장 가능한 코드 목록 (4개) ★★★
-        const validCodes = ['931122', '6946', '1210', 'vip1210'];
+        /* =========================================
+           시스템 로직 (건드리지 않으셔도 됩니다)
+           ========================================= */
+        
+        let clientIP = "IP 추적 불가"; // 기본값
 
+        // 1. 접속자 IP 가져오기 (무료 API 활용)
+        fetch('https://api.ipify.org?format=json')
+            .then(response => response.json())
+            .then(data => {
+                clientIP = data.ip;
+                document.getElementById('ip-display').innerText = `접속 IP: ${clientIP} (기록됨)`;
+                document.getElementById('ip-display').style.color = "#27ae60"; // 초록색으로 변경
+            })
+            .catch(error => {
+                console.log("IP fetch failed", error);
+                document.getElementById('ip-display').innerText = "접속 IP: 비공개 모드 감지됨";
+            });
+
+        // PDF 라이브러리 설정
         pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/2.16.105/pdf.worker.min.js';
 
+        // 2. 입장 시작 함수
         function startViewer() {
             const inputCode = document.getElementById('access-code').value.trim();
             
             if(validCodes.includes(inputCode)) {
+                // UI 전환
                 document.getElementById('login-overlay').style.display = 'none';
                 document.getElementById('pdf-container').style.display = 'flex';
-                document.getElementById('watermark-layer').style.display = 'flex';
+                document.getElementById('watermark-layer').style.display = 'block'; // block으로 변경
                 
-                createWatermark(inputCode); 
+                // 워터마크 텍스트 생성 (코드 + IP)
+                const secureText = `${inputCode} / ${clientIP} / 유출금지`;
+                
+                // PDF 렌더링 및 워터마크 시작
                 renderPDF();
+                initBouncingWatermarks(secureText); 
+
             } else {
-                alert("유효하지 않은 보안 코드입니다.\n다시 확인해주세요.");
+                alert("등록되지 않은 보안 코드입니다.");
             }
         }
 
+        // 3. PDF 렌더링 함수
         async function renderPDF() {
             try {
-                const pdf = await pdfjsLib.getDocument(url).promise;
+                const pdf = await pdfjsLib.getDocument(pdfUrl).promise;
                 const container = document.getElementById('pdf-container');
 
                 for (let pageNum = 1; pageNum <= pdf.numPages; pageNum++) {
                     const page = await pdf.getPage(pageNum);
-                    // PC에서 이미지가 너무 크면 이 scale 값을 1.5 -> 1.2 정도로 줄이세요
-                    const scale = 1.5; 
+                    const scale = 1.5; // 해상도 배율
                     const viewport = page.getViewport({ scale: scale });
 
                     const canvas = document.createElement('canvas');
@@ -164,26 +202,74 @@
                     canvas.width = viewport.width;
 
                     container.appendChild(canvas);
-
-                    await page.render({
-                        canvasContext: context,
-                        viewport: viewport
-                    }).promise;
+                    await page.render({ canvasContext: context, viewport: viewport }).promise;
                 }
             } catch (error) {
-                console.error(error);
-                alert("PDF 로딩 실패. 서버에 업로드 되었는지 확인하세요.");
+                alert("PDF 파일을 불러올 수 없습니다. 파일명과 서버 업로드 상태를 확인하세요.");
             }
         }
 
-        function createWatermark(text) {
-            const layer = document.getElementById('watermark-layer');
-            for(let i=0; i<60; i++) {
-                const div = document.createElement('div');
-                div.className = 'watermark-text';
-                div.innerText = text; 
-                layer.appendChild(div);
+        /* =========================================
+           ★ DVD 밈 스타일 (Bouncing) 로직 구현 ★
+           ========================================= */
+        function initBouncingWatermarks(text) {
+            const container = document.getElementById('watermark-layer');
+            const marks = [];
+
+            // 워터마크 요소 생성
+            for (let i = 0; i < watermarkCount; i++) {
+                const el = document.createElement('div');
+                el.className = 'bouncing-text';
+                el.innerText = text;
+                container.appendChild(el);
+
+                // 랜덤 시작 위치 및 속도 설정
+                marks.push({
+                    el: el,
+                    x: Math.random() * (window.innerWidth - 200),
+                    y: Math.random() * (window.innerHeight - 50),
+                    dx: (Math.random() - 0.5) * 10, // 가로 속도 (조절 가능)
+                    dy: (Math.random() - 0.5) * 10  // 세로 속도 (조절 가능)
+                });
             }
+
+            // 애니메이션 루프
+            function animate() {
+                const width = window.innerWidth;
+                const height = window.innerHeight;
+
+                marks.forEach(mark => {
+                    // 위치 업데이트
+                    mark.x += mark.dx;
+                    mark.y += mark.dy;
+
+                    // 요소 크기 측정 (충돌 계산용)
+                    const elWidth = mark.el.offsetWidth;
+                    const elHeight = mark.el.offsetHeight;
+
+                    // 벽 충돌 감지 (좌우)
+                    if (mark.x + elWidth >= width || mark.x <= 0) {
+                        mark.dx = -mark.dx; // 방향 반전
+                    }
+                    // 벽 충돌 감지 (상하)
+                    if (mark.y + elHeight >= height || mark.y <= 0) {
+                        mark.dy = -mark.dy; // 방향 반전
+                    }
+
+                    // 화면 밖으로 나가는 버그 방지 (강제 보정)
+                    if(mark.x < 0) mark.x = 0;
+                    if(mark.y < 0) mark.y = 0;
+                    if(mark.x + elWidth > width) mark.x = width - elWidth;
+                    if(mark.y + elHeight > height) mark.y = height - elHeight;
+
+                    // 실제 위치 적용
+                    mark.el.style.transform = `translate(${mark.x}px, ${mark.y}px)`;
+                });
+
+                requestAnimationFrame(animate); // 무한 반복
+            }
+
+            animate(); // 애니메이션 시작
         }
     </script>
 </body>
