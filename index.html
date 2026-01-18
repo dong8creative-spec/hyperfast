@@ -257,10 +257,35 @@
                 console.error("타임스탬프 로드 실패:", err);
             });
 
-        // CSV 파싱 함수
+        // CSV 파싱 함수 (따옴표 처리 개선)
         function parseCSV(text) {
-            const rows = text.split(/\r?\n/).map(row => row.split(','));
-            return rows.slice(1).map(r => r.map(c => c ? c.trim() : "")).filter(r => r.length > 1 && r[0]);
+            const rows = [];
+            const lines = text.split(/\r?\n/);
+            
+            for (let i = 0; i < lines.length; i++) {
+                const line = lines[i].trim();
+                if (!line) continue;
+                
+                const row = [];
+                let current = '';
+                let inQuotes = false;
+                
+                for (let j = 0; j < line.length; j++) {
+                    const char = line[j];
+                    if (char === '"') {
+                        inQuotes = !inQuotes;
+                    } else if (char === ',' && !inQuotes) {
+                        row.push(current.trim());
+                        current = '';
+                    } else {
+                        current += char;
+                    }
+                }
+                row.push(current.trim());
+                rows.push(row);
+            }
+            
+            return rows.slice(1).filter(r => r.length > 1 && r[0]);
         }
 
         /* [엔터키 이동 로직] */
@@ -344,7 +369,7 @@
 
         function playVideo(index) {
             const vid = YOUTUBE_IDS[index];
-            document.getElementById('yt-player').src = `https://www.youtube.com/embed/${vid}?autoplay=1&rel=0&modestbranding=1&enablejsapi=1&fs=0`;
+            document.getElementById('yt-player').src = `https://www.youtube.com/embed/${vid}?autoplay=1&rel=0&modestbranding=1&enablejsapi=1&fs=0&origin=${window.location.origin}`;
 
             document.querySelectorAll('.cls-btn').forEach((b, i) => {
                 b.className = (i === index) ? 'cls-btn active' : 'cls-btn';
@@ -377,7 +402,18 @@
         }
 
         function seekTo(seconds) {
-            document.getElementById('yt-player').contentWindow.postMessage(JSON.stringify({ event: 'command', func: 'seekTo', args: [seconds, true] }), '*');
+            const iframe = document.getElementById('yt-player');
+            if (iframe && iframe.contentWindow) {
+                // YouTube iframe API를 통한 seekTo 명령
+                iframe.contentWindow.postMessage(
+                    JSON.stringify({
+                        event: 'command',
+                        func: 'seekTo',
+                        args: [seconds, true]
+                    }),
+                    'https://www.youtube.com'
+                );
+            }
         }
 
         /* 기타: PDF, 워터마크, IP */
@@ -398,7 +434,11 @@
                     await page.render({ canvasContext: canvas.getContext('2d'), viewport: viewport }).promise;
                     container.appendChild(canvas);
                 }
-            } catch(e) {}
+            } catch(e) {
+                console.error('PDF 렌더링 오류:', e);
+                const container = document.getElementById('pdf-container');
+                container.innerHTML = '<div style="color:#e74c3c; padding:20px; text-align:center;">PDF 파일을 불러올 수 없습니다. 파일 경로를 확인해주세요.</div>';
+            }
         }
         
         function initWatermark(text) {
