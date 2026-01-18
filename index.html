@@ -363,6 +363,21 @@
             initWatermark(`${code} / ${clientIP} / ${name} / 유출 시 모든 책임은 저 스스로에게 있습니다`);
         }
 
+        /* 타임스탬프 포맷팅 함수 (60분 이상일 때 시:분:초 형식) */
+        function formatTimestamp(seconds) {
+            const hours = Math.floor(seconds / 3600);
+            const minutes = Math.floor((seconds % 3600) / 60);
+            const secs = seconds % 60;
+            
+            if (hours > 0) {
+                // 60분 이상: 시:분:초 형식
+                return `${hours}:${minutes.toString().padStart(2, '0')}:${secs.toString().padStart(2, '0')}`;
+            } else {
+                // 60분 미만: 분:초 형식
+                return `${minutes}:${secs.toString().padStart(2, '0')}`;
+            }
+        }
+
         /* 영상 플레이어 및 타임스탬프 로직 */
         function openVideoPlayer() { document.getElementById('video-overlay').style.display = 'flex'; playVideo(0); }
         function closeVideoPlayer() { document.getElementById('video-overlay').style.display = 'none'; document.getElementById('yt-player').src = ""; }
@@ -387,9 +402,7 @@
                     const label = row[2];
                     
                     if(!isNaN(seconds) && label) {
-                        const min = Math.floor(seconds / 60);
-                        const sec = seconds % 60;
-                        const timeStr = `${min}:${sec.toString().padStart(2, '0')}`;
+                        const timeStr = formatTimestamp(seconds);
 
                         const btn = document.createElement('div');
                         btn.className = 'ts-item';
