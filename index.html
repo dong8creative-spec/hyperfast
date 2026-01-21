@@ -234,7 +234,11 @@
         const USER_SHEET_URL = "https://docs.google.com/spreadsheets/d/e/2PACX-1vTi1DDz4qoDr1avgqTieDiRqSW4oGSBMY-Oxk-gGPfb95piTB6Y2MgTbfJ66ahevUTzbM_gUhd2WtpC/pub?output=csv";
         const TIMESTAMP_SHEET_URL = "https://docs.google.com/spreadsheets/d/e/2PACX-1vRyPyC0zpg7zbQnjQihokiUKUK0cqLhabNMafQ1cYbp5XLbLkTGyx_y17QDtazCo_rTHiFjYB1UD6DI/pub?output=csv"; 
 
-        /* 영상 ID (1강, 2강, 3강 순서) */
+        /* 영상 ID (1강, 2강, 3강 순서)
+         * 인덱스 0: 1강 - 기본설정 (7DSdyagekfU)
+         * 인덱스 1: 2강 - 작업 노하우 (DXnkG0XJqnU) ⚠️ 재생 문제 확인 필요
+         * 인덱스 2: 3강 - 실제 작업 시 속도 개선 팁 (L_jWHffIx5E)
+         */
         const YOUTUBE_IDS = ["7DSdyagekfU", "DXnkG0XJqnU", "L_jWHffIx5E"];
 
         /* 변수 설정 */
@@ -380,16 +384,43 @@
 
         /* 영상 플레이어 및 타임스탬프 로직 */
         function openVideoPlayer() { document.getElementById('video-overlay').style.display = 'flex'; playVideo(0); }
-        function closeVideoPlayer() { document.getElementById('video-overlay').style.display = 'none'; document.getElementById('yt-player').src = ""; }
+        function closeVideoPlayer() { 
+            document.getElementById('video-overlay').style.display = 'none'; 
+            const iframe = document.getElementById('yt-player');
+            if (iframe) {
+                // iframe을 완전히 비워서 영상 정지
+                iframe.src = "about:blank";
+            }
+        }
 
         function playVideo(index) {
-            const vid = YOUTUBE_IDS[index];
-            document.getElementById('yt-player').src = `https://www.youtube.com/embed/${vid}?autoplay=1&rel=0&modestbranding=1&enablejsapi=1&fs=0&origin=${window.location.origin}`;
+            // 인덱스 유효성 검사
+            if (index < 0 || index >= YOUTUBE_IDS.length) {
+                console.error('유효하지 않은 영상 인덱스:', index);
+                return;
+            }
 
+            const vid = YOUTUBE_IDS[index];
+            console.log(`영상 재생 시도: 인덱스 ${index}, 영상 ID: ${vid}`);
+            
+            if (!vid || vid.trim() === '') {
+                console.error('영상 ID가 비어있습니다:', vid);
+                alert(`영상 ID가 설정되지 않았습니다. (인덱스: ${index})`);
+                return;
+            }
+
+            const iframe = document.getElementById('yt-player');
+            if (!iframe) {
+                console.error('iframe 요소를 찾을 수 없습니다.');
+                return;
+            }
+
+            // 탭 버튼 활성화 상태 업데이트
             document.querySelectorAll('.cls-btn').forEach((b, i) => {
                 b.className = (i === index) ? 'cls-btn active' : 'cls-btn';
             });
 
+            // 타임스탬프 데이터 필터링 및 표시
             const currentData = fetchedTimestamps.filter(row => parseInt(row[0]) === index + 1);
             const container = document.getElementById('ts-content');
             container.innerHTML = "";
@@ -412,6 +443,24 @@
                     }
                 });
             }
+
+            // iframe을 완전히 새로 로드하기 위해 먼저 비우기
+            iframe.src = "about:blank";
+            
+            // 짧은 지연 후 새 URL 로드 (iframe이 완전히 비워진 후 로드)
+            setTimeout(() => {
+                // YouTube embed URL 생성 (추가 파라미터로 호환성 향상)
+                const embedUrl = `https://www.youtube.com/embed/${vid}?autoplay=1&rel=0&modestbranding=1&enablejsapi=1&fs=0&playsinline=1&origin=${encodeURIComponent(window.location.origin)}`;
+                console.log('영상 URL:', embedUrl);
+                
+                // iframe src 설정
+                iframe.src = embedUrl;
+
+                // iframe 로드 이벤트 리스너 추가 (에러 확인용)
+                iframe.onload = function() {
+                    console.log(`영상 iframe 로드 완료: 인덱스 ${index}, 영상 ID: ${vid}`);
+                };
+            }, 100);
         }
 
         function seekTo(seconds) {
