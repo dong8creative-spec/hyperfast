@@ -254,7 +254,8 @@
                 return res.text();
             })
             .then(text => {
-                fetchedTimestamps = parseCSV(text);
+                // 타임스탬프 시트는 강의번호, 시간, 설명 3개 컬럼 필요
+                fetchedTimestamps = parseCSV(text, 3);
                 console.log("타임스탬프 로드 완료:", fetchedTimestamps.length + "개");
                 console.log("타임스탬프 데이터 샘플:", fetchedTimestamps.slice(0, 3));
             })
@@ -264,8 +265,8 @@
             });
 
         // CSV 파싱 함수 (따옴표 처리 개선)
-        // CSV 구조: 강의번호, 시간(초), 설명
-        function parseCSV(text) {
+        // minColumns: 최소 필요한 컬럼 수 (기본값: 2)
+        function parseCSV(text, minColumns = 2) {
             const rows = [];
             const lines = text.split(/\r?\n/);
             
@@ -292,13 +293,17 @@
                 rows.push(row);
             }
             
-            // 첫 번째 행(헤더) 제거하고, 최소 3개 컬럼(강의번호, 시간, 설명)이 있는 행만 반환
+            // 첫 번째 행(헤더) 제거하고, 최소 컬럼 수를 만족하는 행만 반환
             const dataRows = rows.slice(1).filter(r => {
-                // row[0] = 강의번호, row[1] = 시간(초), row[2] = 설명
-                return r.length >= 3 && r[0] && r[1] && r[2];
+                // 최소 컬럼 수를 만족하고, 모든 필수 컬럼이 비어있지 않은지 확인
+                if (r.length < minColumns) return false;
+                for (let i = 0; i < minColumns; i++) {
+                    if (!r[i] || r[i].trim() === '') return false;
+                }
+                return true;
             });
             
-            console.log("CSV 파싱 결과:", dataRows.length + "개 행");
+            console.log("CSV 파싱 결과:", dataRows.length + "개 행 (최소 컬럼: " + minColumns + ")");
             if (dataRows.length > 0) {
                 console.log("첫 번째 데이터 샘플:", dataRows[0]);
             }
@@ -348,19 +353,41 @@
                 const res = await fetch(USER_SHEET_URL);
                 if(!res.ok) throw new Error("시트 연결 실패");
                 const text = await res.text();
-                const users = parseCSV(text);
                 
-                const found = users.find(u => u[0] === name && u[1] === code);
+                // 사용자 시트는 이름, 코드 2개 컬럼만 필요
+                const users = parseCSV(text, 2);
+                
+                console.log("사용자 명단 로드:", users.length + "명");
+                console.log("입력된 정보 - 이름:", name, "코드:", code);
+                
+                // 대소문자 구분 없이, 공백 제거 후 비교
+                const found = users.find(u => {
+                    const sheetName = (u[0] || '').trim();
+                    const sheetCode = (u[1] || '').trim();
+                    const inputName = name.trim();
+                    const inputCode = code.trim();
+                    
+                    // 정확히 일치하거나, 대소문자 무시하고 비교
+                    const nameMatch = sheetName === inputName || sheetName.toLowerCase() === inputName.toLowerCase();
+                    const codeMatch = sheetCode === inputCode || sheetCode.toLowerCase() === inputCode.toLowerCase();
+                    
+                    return nameMatch && codeMatch;
+                });
 
                 if (found) {
                     try { localStorage.removeItem('accessFailCount'); } catch(e){}
+                    failCount = 0; // 성공 시 실패 카운트 초기화
                     enterSuccess(name, code);
                 } else {
                     failCount++;
                     localStorage.setItem('accessFailCount', failCount);
                     btn.disabled = false; btn.innerText = "입장하기";
-                    if (maxAttempts - failCount <= 0) showBan();
-                    else {
+                    
+                    console.log("로그인 실패 - 등록된 사용자 목록:", users.map(u => `${u[0]} / ${u[1]}`));
+                    
+                    if (maxAttempts - failCount <= 0) {
+                        showBan();
+                    } else {
                         document.getElementById('error-msg').innerHTML = `정보 불일치.<br>(남은 기회: ${maxAttempts - failCount}회)`;
                         document.getElementById('error-modal').style.display = 'flex';
                     }
