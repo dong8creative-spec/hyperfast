@@ -256,12 +256,15 @@
             .then(text => {
                 fetchedTimestamps = parseCSV(text);
                 console.log("타임스탬프 로드 완료:", fetchedTimestamps.length + "개");
+                console.log("타임스탬프 데이터 샘플:", fetchedTimestamps.slice(0, 3));
             })
             .catch(err => {
                 console.error("타임스탬프 로드 실패:", err);
+                fetchedTimestamps = [];
             });
 
         // CSV 파싱 함수 (따옴표 처리 개선)
+        // CSV 구조: 강의번호, 시간(초), 설명
         function parseCSV(text) {
             const rows = [];
             const lines = text.split(/\r?\n/);
@@ -289,7 +292,18 @@
                 rows.push(row);
             }
             
-            return rows.slice(1).filter(r => r.length > 1 && r[0]);
+            // 첫 번째 행(헤더) 제거하고, 최소 3개 컬럼(강의번호, 시간, 설명)이 있는 행만 반환
+            const dataRows = rows.slice(1).filter(r => {
+                // row[0] = 강의번호, row[1] = 시간(초), row[2] = 설명
+                return r.length >= 3 && r[0] && r[1] && r[2];
+            });
+            
+            console.log("CSV 파싱 결과:", dataRows.length + "개 행");
+            if (dataRows.length > 0) {
+                console.log("첫 번째 데이터 샘플:", dataRows[0]);
+            }
+            
+            return dataRows;
         }
 
         /* [엔터키 이동 로직] */
@@ -367,17 +381,28 @@
             initWatermark(`${code} / ${clientIP} / ${name} / 유출 시 모든 책임은 저 스스로에게 있습니다`);
         }
 
-        /* 타임스탬프 포맷팅 함수 (60분 이상일 때 시:분:초 형식) */
+        /* 타임스탬프 포맷팅 함수 
+         * 60분(3600초) 이상: 시:분:초 형식 (예: 1:05:30)
+         * 60분 미만: 분:초 형식 (예: 59:59, 최대 59:59까지)
+         */
         function formatTimestamp(seconds) {
-            const hours = Math.floor(seconds / 3600);
-            const minutes = Math.floor((seconds % 3600) / 60);
-            const secs = seconds % 60;
+            // 초 단위를 숫자로 변환
+            const totalSeconds = parseInt(seconds);
+            if (isNaN(totalSeconds) || totalSeconds < 0) {
+                return "0:00";
+            }
             
-            if (hours > 0) {
-                // 60분 이상: 시:분:초 형식
+            // 3600초(60분) 이상인지 확인
+            if (totalSeconds >= 3600) {
+                // 시:분:초 형식
+                const hours = Math.floor(totalSeconds / 3600);
+                const minutes = Math.floor((totalSeconds % 3600) / 60);
+                const secs = totalSeconds % 60;
                 return `${hours}:${minutes.toString().padStart(2, '0')}:${secs.toString().padStart(2, '0')}`;
             } else {
-                // 60분 미만: 분:초 형식
+                // 분:초 형식 (59:59까지)
+                const minutes = Math.floor(totalSeconds / 60);
+                const secs = totalSeconds % 60;
                 return `${minutes}:${secs.toString().padStart(2, '0')}`;
             }
         }
@@ -421,25 +446,45 @@
             });
 
             // 타임스탬프 데이터 필터링 및 표시
-            const currentData = fetchedTimestamps.filter(row => parseInt(row[0]) === index + 1);
+            // CSV 구조: row[0] = 강의번호(1,2,3), row[1] = 초 단위 시간, row[2] = 라벨/설명
+            const currentData = fetchedTimestamps.filter(row => {
+                const lectureNum = parseInt(row[0]);
+                return !isNaN(lectureNum) && lectureNum === (index + 1);
+            });
+            
             const container = document.getElementById('ts-content');
             container.innerHTML = "";
+
+            console.log(`강의 ${index + 1} 타임스탬프 필터링 결과:`, currentData.length + "개");
 
             if(currentData.length === 0) {
                 container.innerHTML = "<div style='color:#777; text-align:center; padding:20px;'>타임스탬프가 없습니다.</div>";
             } else {
-                currentData.forEach(row => {
-                    const seconds = parseInt(row[1]); 
-                    const label = row[2];
+                // 시간 순서대로 정렬
+                currentData.sort((a, b) => {
+                    const timeA = parseInt(a[1]) || 0;
+                    const timeB = parseInt(b[1]) || 0;
+                    return timeA - timeB;
+                });
+
+                currentData.forEach((row, idx) => {
+                    // row[0] = 강의번호, row[1] = 초 단위 시간, row[2] = 라벨
+                    const seconds = parseInt(row[1]);
+                    const label = row[2] || "";
                     
-                    if(!isNaN(seconds) && label) {
+                    // 유효한 데이터인지 확인
+                    if (!isNaN(seconds) && seconds >= 0 && label.trim() !== "") {
                         const timeStr = formatTimestamp(seconds);
+                        
+                        console.log(`타임스탬프 ${idx + 1}: ${timeStr} - ${label} (${seconds}초)`);
 
                         const btn = document.createElement('div');
                         btn.className = 'ts-item';
                         btn.innerHTML = `<span class="ts-time-badge">${timeStr}</span> ${label}`;
                         btn.onclick = () => seekTo(seconds);
                         container.appendChild(btn);
+                    } else {
+                        console.warn(`유효하지 않은 타임스탬프 데이터:`, row);
                     }
                 });
             }
