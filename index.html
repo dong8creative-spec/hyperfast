@@ -59,8 +59,26 @@
         .cls-btn:hover:not(.active) { background: #333; color: white; }
 
         /* 아이프레임 영역 */
-        .iframe-wrap { flex: 1; width: 100%; position: relative; background: #000; }
-        iframe { width: 100%; height: 100%; border: none; }
+        .iframe-wrap { flex: 1; width: 100%; position: relative; background: #000; overflow: hidden; }
+        .iframe-wrap iframe { width: 100%; height: 100%; border: none; position: relative; z-index: 1; }
+        /* YouTube 로고·외부 이동 클릭 차단 (우하단·우상단·상단 바) */
+        .yt-shield {
+            position: absolute; z-index: 2;
+            background: transparent; pointer-events: auto;
+        }
+        .yt-shield-br { bottom: 0; right: 0; width: 130px; height: 58px; }
+        .yt-shield-tr { top: 0; right: 0; width: 72px; height: 52px; }
+        .yt-shield-top { top: 0; left: 0; right: 0; height: 36px; }
+        /* 영상 위 워터마크 (유출 추적) */
+        .video-watermark {
+            position: absolute; inset: 0; z-index: 3; pointer-events: none;
+            display: flex; align-items: center; justify-content: center;
+            font-size: clamp(11px, 2vw, 15px); font-weight: 900;
+            color: rgba(255, 255, 255, 0.14);
+            text-shadow: 0 0 6px rgba(0, 0, 0, 0.9);
+            white-space: nowrap; overflow: hidden; padding: 0 12px;
+            user-select: none;
+        }
 
         /* 오른쪽: 타임스탬프 영역 (25%) */
         .timestamp-area {
@@ -177,9 +195,16 @@
         #blur-overlay { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0, 0, 0, 0.95); z-index: 99995; display: none; flex-direction: column; justify-content: center; align-items: center; color: white; text-align: center; }
         #prtsc-blocker { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: #ff0000; z-index: 99999; display: none; flex-direction: column; justify-content: center; align-items: center; color: white; text-align: center; }
         #pdf-container {
-            display: flex; flex-direction: column; align-items: center; padding: 20px 0; display: none;
+            display: none;
+            flex-direction: column; align-items: center;
+            width: 100%; height: 100vh;
+            padding: 20px 0;
+            overflow-y: auto;
+            -webkit-overflow-scrolling: touch;
             overscroll-behavior: contain;
+            overscroll-behavior-y: contain;
         }
+        body.session-active { overflow: hidden; }
         canvas { margin-bottom: 20px; box-shadow: 0 5px 25px rgba(0,0,0,0.5); max-width: 100%; height: auto; }
         #watermark-layer { position: fixed; top: 0; left: 0; width: 100%; height: 100%; pointer-events: none; z-index: 9999; display: none; overflow: hidden; }
         .bouncing-text { position: absolute; font-size: 18px; font-weight: 900; color: rgba(255, 255, 255, 0.18); white-space: nowrap; user-select: none; text-shadow: 1px 1px 4px rgba(0,0,0,0.8); }
@@ -218,8 +243,16 @@
                     <button class="cls-btn" onclick="playVideo(1)">2. 작업 노하우</button>
                     <button class="cls-btn" onclick="playVideo(2)">3. 실제 작업 시 속도 개선 팁</button>
                 </div>
-                <div class="iframe-wrap">
-                    <iframe id="yt-player" src="" allow="autoplay; encrypted-media"></iframe>
+                <div class="iframe-wrap" id="iframe-wrap">
+                    <iframe id="yt-player" src=""
+                        allow="autoplay; encrypted-media"
+                        referrerpolicy="strict-origin-when-cross-origin"
+                        sandbox="allow-scripts allow-same-origin allow-presentation"
+                        title="강의 영상"></iframe>
+                    <div class="yt-shield yt-shield-top" aria-hidden="true"></div>
+                    <div class="yt-shield yt-shield-tr" aria-hidden="true"></div>
+                    <div class="yt-shield yt-shield-br" aria-hidden="true"></div>
+                    <div class="video-watermark" id="video-watermark"></div>
                 </div>
             </div>
 
@@ -256,18 +289,78 @@
         const USER_SHEET_URL = "https://docs.google.com/spreadsheets/d/e/2PACX-1vTi1DDz4qoDr1avgqTieDiRqSW4oGSBMY-Oxk-gGPfb95piTB6Y2MgTbfJ66ahevUTzbM_gUhd2WtpC/pub?output=csv";
         const TIMESTAMP_SHEET_URL = "https://docs.google.com/spreadsheets/d/e/2PACX-1vRyPyC0zpg7zbQnjQihokiUKUK0cqLhabNMafQ1cYbp5XLbLkTGyx_y17QDtazCo_rTHiFjYB1UD6DI/pub?output=csv"; 
 
-        /* 영상 ID (1강, 2강, 3강 순서)
-         * 인덱스 0: 1강 - 기본설정 (7DSdyagekfU)
-         * 인덱스 1: 2강 - 작업 노하우 (DXnkG0XJqnU) ⚠️ 재생 문제 확인 필요
-         * 인덱스 2: 3강 - 실제 작업 시 속도 개선 팁 (L_jWHffIx5E)
-         */
-        const YOUTUBE_IDS = ["7DSdyagekfU", "DXnkG0XJqnU", "L_jWHffIx5E"];
+        /* 영상 ID (1~3강, Base64 난독화) */
+        const _ENCODED_VIDS = ['N0RTZHlhZ2VrZlU=', 'RFhua0cwWEpxblU=', 'TF9qV0hmZ0l4NUU='];
+        const YT_EMBED_HOST = 'https://www.youtube-nocookie.com';
+        const YT_MESSAGE_ORIGINS = ['https://www.youtube.com', 'https://www.youtube-nocookie.com'];
+
+        function getVideoId(index) {
+            try { return atob(_ENCODED_VIDS[index] || ''); } catch (e) { return ''; }
+        }
+
+        function buildEmbedUrl(vid) {
+            const params = new URLSearchParams({
+                autoplay: '1',
+                rel: '0',
+                modestbranding: '1',
+                enablejsapi: '1',
+                fs: '0',
+                playsinline: '1',
+                disablekb: '1',
+                iv_load_policy: '3',
+                cc_load_policy: '0',
+                controls: '1',
+                origin: window.location.origin,
+                widget_referrer: window.location.href
+            });
+            return `${YT_EMBED_HOST}/embed/${vid}?${params.toString()}`;
+        }
+
+        function updateVideoWatermark() {
+            const el = document.getElementById('video-watermark');
+            if (!el) return;
+            try {
+                const { name, code } = JSON.parse(sessionStorage.getItem(SESSION_KEY) || '{}');
+                el.textContent = code && name
+                    ? `${code} / ${clientIP} / ${name}`
+                    : `${clientIP} / 무단 유출 금지`;
+            } catch (e) {
+                el.textContent = `${clientIP} / 무단 유출 금지`;
+            }
+        }
+
+        (function initPlayerGuards() {
+            const wrap = document.getElementById('iframe-wrap');
+            if (!wrap) return;
+            wrap.addEventListener('contextmenu', e => e.preventDefault());
+            wrap.addEventListener('mousedown', e => { if (e.button === 1) e.preventDefault(); });
+            wrap.addEventListener('auxclick', e => e.preventDefault());
+            wrap.addEventListener('dragstart', e => e.preventDefault());
+        })();
 
         /* 변수 설정 */
         let fetchedTimestamps = [];
         let clientIP = "IP 확인 중";
         let failCount = parseInt(localStorage.getItem('accessFailCount') || 0);
         const maxAttempts = 5;
+        const SESSION_KEY = 'hyperfastSession';
+
+        function saveSession(name, code) {
+            try {
+                sessionStorage.setItem(SESSION_KEY, JSON.stringify({ name, code }));
+            } catch (e) {}
+        }
+
+        function restoreSession() {
+            if (failCount >= maxAttempts) return;
+            if (new URLSearchParams(window.location.search).get('admin') === 'pass') return;
+            try {
+                const raw = sessionStorage.getItem(SESSION_KEY);
+                if (!raw) return;
+                const { name, code } = JSON.parse(raw);
+                if (name && code) enterSuccess(name, code);
+            } catch (e) {}
+        }
 
         // [초기화] 타임스탬프 데이터 미리 가져오기
         fetch(TIMESTAMP_SHEET_URL)
@@ -422,6 +515,8 @@
         }
 
         function enterSuccess(name, code) {
+            saveSession(name, code);
+            document.body.classList.add('session-active');
             document.getElementById('login-overlay').style.display = 'none';
             document.getElementById('pdf-container').style.display = 'flex';
             document.getElementById('watermark-layer').style.display = 'block';
@@ -429,6 +524,8 @@
             renderPDF();
             initWatermark(`${code} / ${clientIP} / ${name} / 유출 시 모든 책임은 저 스스로에게 있습니다`);
         }
+
+        restoreSession();
 
         /* 타임스탬프 포맷팅 함수 
          * 60분(3600초) 이상: 시:분:초 형식 (예: 1:05:30)
@@ -457,7 +554,11 @@
         }
 
         /* 영상 플레이어 및 타임스탬프 로직 */
-        function openVideoPlayer() { document.getElementById('video-overlay').style.display = 'flex'; playVideo(0); }
+        function openVideoPlayer() {
+            document.getElementById('video-overlay').style.display = 'flex';
+            updateVideoWatermark();
+            playVideo(0);
+        }
         function closeVideoPlayer() { 
             document.getElementById('video-overlay').style.display = 'none'; 
             const iframe = document.getElementById('yt-player');
@@ -468,20 +569,15 @@
         }
 
         function playVideo(index) {
-            // 인덱스 유효성 검사
-            if (index < 0 || index >= YOUTUBE_IDS.length) {
-                console.error('유효하지 않은 영상 인덱스:', index);
+            if (index < 0 || index >= _ENCODED_VIDS.length) return;
+
+            const vid = getVideoId(index);
+            if (!vid) {
+                alert('영상을 불러올 수 없습니다.');
                 return;
             }
 
-            const vid = YOUTUBE_IDS[index];
-            console.log(`영상 재생 시도: 인덱스 ${index}, 영상 ID: ${vid}`);
-            
-            if (!vid || vid.trim() === '') {
-                console.error('영상 ID가 비어있습니다:', vid);
-                alert(`영상 ID가 설정되지 않았습니다. (인덱스: ${index})`);
-                return;
-            }
+            updateVideoWatermark();
 
             const iframe = document.getElementById('yt-player');
             if (!iframe) {
@@ -504,8 +600,6 @@
             const container = document.getElementById('ts-content');
             container.innerHTML = "";
 
-            console.log(`강의 ${index + 1} 타임스탬프 필터링 결과:`, currentData.length + "개");
-
             if(currentData.length === 0) {
                 container.innerHTML = "<div style='color:#777; text-align:center; padding:20px;'>타임스탬프가 없습니다.</div>";
             } else {
@@ -524,8 +618,6 @@
                     // 유효한 데이터인지 확인
                     if (!isNaN(seconds) && seconds >= 0 && label.trim() !== "") {
                         const timeStr = formatTimestamp(seconds);
-                        
-                        console.log(`타임스탬프 ${idx + 1}: ${timeStr} - ${label} (${seconds}초)`);
 
                         const btn = document.createElement('div');
                         btn.className = 'ts-item';
@@ -543,38 +635,29 @@
             
             // 짧은 지연 후 새 URL 로드 (iframe이 완전히 비워진 후 로드)
             setTimeout(() => {
-                // YouTube embed URL 생성 (추가 파라미터로 호환성 향상)
-                const embedUrl = `https://www.youtube.com/embed/${vid}?autoplay=1&rel=0&modestbranding=1&enablejsapi=1&fs=0&playsinline=1&origin=${encodeURIComponent(window.location.origin)}`;
-                console.log('영상 URL:', embedUrl);
-                
-                // iframe src 설정
-                iframe.src = embedUrl;
-
-                // iframe 로드 이벤트 리스너 추가 (에러 확인용)
-                iframe.onload = function() {
-                    console.log(`영상 iframe 로드 완료: 인덱스 ${index}, 영상 ID: ${vid}`);
-                };
+                iframe.src = buildEmbedUrl(vid);
             }, 100);
         }
 
         function seekTo(seconds) {
             const iframe = document.getElementById('yt-player');
-            if (iframe && iframe.contentWindow) {
-                // YouTube iframe API를 통한 seekTo 명령
-                iframe.contentWindow.postMessage(
-                    JSON.stringify({
-                        event: 'command',
-                        func: 'seekTo',
-                        args: [seconds, true]
-                    }),
-                    'https://www.youtube.com'
-                );
-            }
+            if (!iframe || !iframe.contentWindow) return;
+            const msg = JSON.stringify({ event: 'command', func: 'seekTo', args: [seconds, true] });
+            YT_MESSAGE_ORIGINS.forEach(origin => iframe.contentWindow.postMessage(msg, origin));
         }
 
         /* 기타: PDF, 워터마크, IP */
-        fetch('https://api.ipify.org?format=json').then(r=>r.json()).then(d=>{clientIP=d.ip; document.getElementById('ip-display').innerText=`접속 IP: ${clientIP}`;});
-        function showBan() { document.getElementById('login-overlay').style.display = 'none'; document.getElementById('ban-overlay').style.display = 'flex'; }
+        fetch('https://api.ipify.org?format=json').then(r=>r.json()).then(d=>{
+            clientIP=d.ip;
+            document.getElementById('ip-display').innerText=`접속 IP: ${clientIP}`;
+            updateVideoWatermark();
+        });
+        function showBan() {
+            try { sessionStorage.removeItem(SESSION_KEY); } catch(e) {}
+            document.body.classList.remove('session-active');
+            document.getElementById('login-overlay').style.display = 'none';
+            document.getElementById('ban-overlay').style.display = 'flex';
+        }
         function closePopup() { document.getElementById('error-modal').style.display = 'none'; }
         
         async function renderPDF() {
